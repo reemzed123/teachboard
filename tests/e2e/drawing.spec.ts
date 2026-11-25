@@ -76,6 +76,12 @@ function objects(page: Page) {
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/?debug=1');
+  // מחכים שהשיעור ייטען מהאחסון, ואז מתחילים מתצוגה ידועה: 100%, ראשית בפינה.
+  await expect(page.getByTestId('save-status')).toHaveAttribute('data-status', 'saved');
+  await page.evaluate(() =>
+    (window as any).__tb.runtime.board.getState().setView({ x: 0, y: 0, scale: 1 }),
+  );
+  await expect(page.getByTestId('zoom-value')).toHaveText('100%');
 });
 
 test('draws with the mouse; undo and redo with buttons and keyboard', async ({ page }) => {
@@ -109,6 +115,9 @@ test('pen pressure is recorded and reported', async ({ page }) => {
   expect(obj!.pressure).toBe(true);
   const pressures = obj!.points.filter((_, i) => i % 3 === 2);
   expect(Math.max(...pressures) - Math.min(...pressures)).toBeGreaterThan(0.3);
+  // החלונית נסגרה אוטומטית כשהתחלנו לכתוב – פותחים שוב
+  await expect(page.getByRole('complementary', { name: 'ציור וכתיבה' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'ציור וכתיבה' }).click();
   await expect(page.getByTestId('pressure-status')).toHaveText(/זוהה עט עם לחץ/);
 });
 
@@ -229,8 +238,16 @@ test('zoom with Ctrl+wheel and buttons; fit content', async ({ page }) => {
     [100, 100],
     [140, 120],
   ]);
+  // בעמוד מחברת: "התאמה למסך" מציגה את כל הדף
   await page.locator('.tb-zoom [data-action="view.zoomFit"]').click();
-  await expect(zoom).toHaveText('200%'); // קו קטן מוגדל עד הגבול של 200%
+  const pct = Number((await zoom.textContent())!.replace('%', ''));
+  expect(pct).toBeLessThan(100);
+  // בלוח אינסופי: התאמה לתוכן – קו קטן מוגדל עד הגבול של 400%
+  await page.evaluate(() =>
+    (window as any).__tb.runtime.board.getState().setPageProps({ layout: 'infinite' }),
+  );
+  await page.locator('.tb-zoom [data-action="view.zoomFit"]').click();
+  await expect(zoom).toHaveText('400%');
 });
 
 test('after a pen is detected, one finger pans instead of drawing; two fingers zoom', async ({

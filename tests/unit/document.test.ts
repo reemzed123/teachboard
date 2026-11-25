@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { commit, emptyHistory, redo, undo, type DocState } from '../../src/core/document/history';
 import { applyOp, invertOps, applyOps } from '../../src/core/document/ops';
 import {
+  DEFAULT_BACKGROUND,
+  DEFAULT_PAGE_SIZE,
   DOCUMENT_VERSION,
   IDENTITY_TRANSFORM,
+  type Page,
   type BoardDocument,
   type InkObject,
 } from '../../src/core/document/types';
@@ -19,8 +22,18 @@ function ink(id: string, x = 0): InkObject {
   };
 }
 
+function page(id: string, objects: InkObject[] = []): Page {
+  return {
+    id,
+    layout: 'bounded',
+    size: { ...DEFAULT_PAGE_SIZE },
+    background: { ...DEFAULT_BACKGROUND },
+    objects,
+  };
+}
+
 function doc(...objs: InkObject[]): BoardDocument {
-  return { version: DOCUMENT_VERSION, pages: [{ id: 'p1', objects: objs }] };
+  return { version: DOCUMENT_VERSION, pages: [page('p1', objs)] };
 }
 
 const ids = (d: BoardDocument) => d.pages[0]!.objects.map((o) => o.id);
@@ -92,5 +105,49 @@ describe('history', () => {
   it('empty commit does nothing', () => {
     const s = start();
     expect(commit(s, 'nothing', [])).toBe(s);
+  });
+});
+
+describe('page ops', () => {
+  const pages = (d: BoardDocument) => d.pages.map((p) => p.id);
+  const three = (): BoardDocument => ({
+    version: DOCUMENT_VERSION,
+    pages: [page('p1', [ink('a')]), page('p2'), page('p3')],
+  });
+
+  it('add, move and remove pages; each is undoable exactly', () => {
+    const d0 = three();
+    const cases = [
+      [{ type: 'addPage' as const, page: page('p4'), index: 1 }],
+      [{ type: 'movePage' as const, pageId: 'p1', index: 2 }],
+      [{ type: 'removePage' as const, pageId: 'p1' }],
+      [
+        {
+          type: 'setPageProps' as const,
+          pageId: 'p2',
+          props: {
+            layout: 'infinite' as const,
+            background: { ...DEFAULT_BACKGROUND, pattern: 'grid' as const },
+          },
+        },
+      ],
+    ];
+    expect(pages(applyOps(d0, cases[0]!))).toEqual(['p1', 'p4', 'p2', 'p3']);
+    expect(pages(applyOps(d0, cases[1]!))).toEqual(['p2', 'p3', 'p1']);
+    expect(pages(applyOps(d0, cases[2]!))).toEqual(['p2', 'p3']);
+    for (const ops of cases) {
+      expect(applyOps(applyOps(d0, ops), invertOps(d0, ops))).toEqual(d0);
+    }
+  });
+
+  it('removing a page keeps its drawings for undo', () => {
+    let s: DocState = { doc: three(), history: emptyHistory() };
+    s = commit(s, 'removePage', [{ type: 'removePage', pageId: 'p1' }]);
+    s = undo(s);
+    expect(s.doc.pages[0]!.objects.map((o) => o.id)).toEqual(['a']);
+  });
+
+  it('never removes the last page', () => {
+    expect(() => applyOp(doc(), { type: 'removePage', pageId: 'p1' })).toThrow();
   });
 });

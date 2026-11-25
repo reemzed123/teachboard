@@ -29,10 +29,18 @@ export function visibleBoardRect(view: ViewState, width: number, height: number)
 }
 
 /** תצוגה שמכניסה את המלבן למסך, עם שוליים. */
-export function fitRect(rect: Rect, width: number, height: number, padding = 40): ViewState {
+export function fitRect(
+  rect: Rect,
+  width: number,
+  height: number,
+  padding = 40,
+  maxScale = 2,
+): ViewState {
   const w = Math.max(rect.width, 1);
   const h = Math.max(rect.height, 1);
-  const scale = clampScale(Math.min((width - padding * 2) / w, (height - padding * 2) / h, 2));
+  const scale = clampScale(
+    Math.min((width - padding * 2) / w, (height - padding * 2) / h, maxScale),
+  );
   return {
     scale,
     x: width / 2 - (rect.x + w / 2) * scale,

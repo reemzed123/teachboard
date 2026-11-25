@@ -1,0 +1,99 @@
+import { describe, expect, it } from 'vitest';
+import { FormatError, validateDocument } from '../../src/core/format/validate';
+import { createEmptyDocument } from '../../src/features/board/boardStore';
+import type { ValidationReport } from '../../src/core/format/validate';
+
+const inkRaw = (id: string) => ({
+  id,
+  type: 'ink',
+  transform: { x: 1, y: 2, rotation: 0, scale: 1 },
+  style: { kind: 'pen', color: '#AABBCC', width: 4, opacity: 1 },
+  points: [0, 0, 0.5, 10, 10, 0.5],
+  pressure: true,
+});
+
+function docWith(objects: unknown[]) {
+  const d = createEmptyDocument() as unknown as { pages: { objects: unknown[] }[] };
+  d.pages[0]!.objects = objects;
+  return d;
+}
+
+describe('validateDocument', () => {
+  it('accepts a valid document and normalizes colors', () => {
+    const out = validateDocument(docWith([inkRaw('a')]));
+    expect(out.pages[0]!.objects[0]!.style.color).toBe('#aabbcc');
+  });
+
+  it('rejects things that are not documents', () => {
+    for (const raw of [null, 5, 'x', [], {}, { pages: 'x' }, { version: 1, pages: [] }]) {
+      expect(() => validateDocument(raw)).toThrow(FormatError);
+    }
+  });
+
+  it('refuses documents from a newer version with a clear code', () => {
+    try {
+      validateDocument({ version: 999, pages: [{}] });
+      expect.unreachable();
+    } catch (e) {
+      expect((e as FormatError).code).toBe('newerVersion');
+    }
+  });
+
+  it('skips broken or unknown objects instead of crashing', () => {
+    const report: ValidationReport = { skippedObjects: 0 };
+    const out = validateDocument(
+      docWith([
+        inkRaw('a'),
+        { type: 'script', code: 'alert(1)' },
+        { ...inkRaw('b'), points: [0, 0] },
+        { ...inkRaw('c'), points: [0, 'x', 0.5] },
+        {
+          ...inkRaw('d'),
+          style: { kind: 'pen', color: 'javascript:alert(1)', width: 4, opacity: 1 },
+        },
+      ]),
+      report,
+    );
+    expect(out.pages[0]!.objects.map((o) => o.id)).toEqual(['a']);
+    expect(report.skippedObjects).toBe(4);
+  });
+
+  it('drops unknown fields (nothing unexpected gets through)', () => {
+    const raw = docWith([{ ...inkRaw('a'), onload: 'evil()', html: '<script>' }]);
+    const obj = validateDocument(raw).pages[0]!.objects[0] as unknown as Record<string, unknown>;
+    expect(obj.onload).toBeUndefined();
+    expect(obj.html).toBeUndefined();
+  });
+
+  it('is not affected by __proto__ tricks', () => {
+    const raw = JSON.parse(
+      '{"version":1,"pages":[{"id":"p1","__proto__":{"polluted":true},"objects":[]}]}',
+    );
+    validateDocument(raw);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+
+  it('fixes duplicate and malformed ids', () => {
+    const out = validateDocument(docWith([inkRaw('a'), inkRaw('a'), inkRaw('../../etc')]));
+    const ids = out.pages[0]!.objects.map((o) => o.id);
+    expect(new Set(ids).size).toBe(3);
+    expect(ids.every((id) => /^[A-Za-z0-9_-]+$/.test(id))).toBe(true);
+  });
+
+  it('clamps out-of-range page settings', () => {
+    const raw = createEmptyDocument() as unknown as { pages: Record<string, unknown>[] };
+    raw.pages[0]!.background = {
+      pattern: 'evil',
+      color: 'red',
+      spacing: 99999,
+      imageAssetId: '../x',
+    };
+    raw.pages[0]!.size = { width: -5, height: 'big' };
+    const p = validateDocument(raw).pages[0]!;
+    expect(p.background.pattern).toBe('none');
+    expect(p.background.color).toBe('#ffffff');
+    expect(p.background.spacing).toBe(80);
+    expect(p.background.imageAssetId).toBeUndefined();
+    expect(p.size).toEqual({ width: 1123, height: 794 });
+  });
+});

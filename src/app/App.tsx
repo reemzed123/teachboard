@@ -7,6 +7,9 @@ import { SettingsPanel } from '../ui/SettingsPanel';
 import { TopBar } from '../ui/TopBar';
 import { Workspace } from '../ui/Workspace';
 import { DrawingPanel } from '../ui/DrawingPanel';
+import { TemplatesPanel } from '../ui/TemplatesPanel';
+import { FilesPanel } from '../ui/FilesPanel';
+import { Toast } from '../ui/Toast';
 import { handleShortcut } from './shortcuts';
 import { useApp, useRuntime } from './StoreContext';
 import { applyTheme } from './theme';
@@ -55,10 +58,13 @@ export function App() {
         {!focusMode && categoryBarVisible && <CategoryBar />}
         {!focusMode && openPanel === 'settings' && <SettingsPanel />}
         {!focusMode && category?.id === 'drawing' && <DrawingPanel />}
+        {!focusMode && category?.id === 'templates' && <TemplatesPanel />}
+        {!focusMode && category?.id === 'files' && <FilesPanel />}
         {!focusMode && category && !category.available && <CategoryPanel category={category} />}
         <Workspace />
       </div>
       {focusMode && <FocusRestoreButton />}
+      <Toast />
     </div>
   );
 }

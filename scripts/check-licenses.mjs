@@ -18,6 +18,8 @@ const ALLOWED = new Set([
   '(MIT OR LGPL-3.0-or-later)',
   'Apache-2.0 OR MIT',
   'MIT OR Apache-2.0',
+  // שני רישיונות מתירניים יחד (pako, תלות של pdf-lib).
+  '(MIT AND Zlib)',
 ]);
 
 const raw = execSync('pnpm licenses list --prod --json', { encoding: 'utf8' });

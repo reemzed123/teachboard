@@ -11,7 +11,17 @@ import { QUICK_ACTION_IDS } from './actionIds';
 
 export type PanelId = CategoryId | 'settings';
 
+export interface Notice {
+  id: number;
+  kind: 'info' | 'error';
+  text: string;
+}
+
 export interface AppState {
+  /** הודעה קצרה למשתמש (נעלמת לבד) */
+  notice: Notice | null;
+  notify(kind: Notice['kind'], text: string): void;
+  dismissNotice(): void;
   settings: Settings;
   /** true אם השמירה האחרונה של ההגדרות נכשלה. */
   settingsSaveFailed: boolean;
@@ -20,6 +30,7 @@ export interface AppState {
   focusMode: boolean;
 
   setTheme(theme: ThemePreference): void;
+  setAutoClosePanel(on: boolean): void;
   setQuickAccess(index: number, actionId: string | null): void;
   togglePanel(panel: PanelId): void;
   closePanel(): void;
@@ -36,7 +47,11 @@ export function createAppStore(storage: SettingsStorage) {
       set({ settings: next, settingsSaveFailed: !ok });
     };
 
+    let noticeId = 0;
     return {
+      notice: null,
+      notify: (kind, text) => set({ notice: { id: ++noticeId, kind, text } }),
+      dismissNotice: () => set({ notice: null }),
       settings: initial,
       settingsSaveFailed: false,
       openPanel: null,
@@ -44,6 +59,7 @@ export function createAppStore(storage: SettingsStorage) {
       focusMode: false,
 
       setTheme: (theme) => updateSettings({ ...get().settings, theme }),
+      setAutoClosePanel: (autoClosePanel) => updateSettings({ ...get().settings, autoClosePanel }),
       setQuickAccess: (index, actionId) =>
         updateSettings({
           ...get().settings,

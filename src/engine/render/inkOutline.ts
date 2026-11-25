@@ -42,6 +42,32 @@ export function toTriples(points: readonly number[]): number[][] {
   return out;
 }
 
+/** מצולע המתאר של הקו (לייצוא וקטורי ל-PDF) */
+export function outlinePolygon(
+  points: readonly number[],
+  kind: InkKind,
+  width: number,
+  pressure: boolean,
+): number[][] {
+  return getStroke(toTriples(points), strokeOptions(kind, width, pressure, true));
+}
+
+/** מצולע → נתיב SVG עם עקומות חלקות (אותה צורה כמו על המסך) */
+export function polygonToSvgPath(poly: number[][]): string {
+  const n = poly.length;
+  if (n < 3) return '';
+  const f = (v: number) => (Math.round(v * 100) / 100).toString();
+  const mid = (a: number[], b: number[]) => [(a[0]! + b[0]!) / 2, (a[1]! + b[1]!) / 2];
+  const start = mid(poly[0]!, poly[1]!);
+  let d = `M${f(start[0]!)} ${f(start[1]!)}`;
+  for (let i = 1; i <= n; i++) {
+    const a = poly[i % n]!;
+    const m = mid(a, poly[(i + 1) % n]!);
+    d += `Q${f(a[0]!)} ${f(a[1]!)} ${f(m[0]!)} ${f(m[1]!)}`;
+  }
+  return d + 'Z';
+}
+
 export function outlinePath(
   points: readonly number[],
   kind: InkKind,

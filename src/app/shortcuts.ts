@@ -10,7 +10,7 @@ interface Binding {
   code: string;
   ctrl?: boolean;
   shift?: boolean;
-  action: QuickActionId | 'selectAll';
+  action: QuickActionId | 'selectAll' | 'pagePrev' | 'pageNext';
 }
 
 const BINDINGS: Binding[] = [
@@ -29,6 +29,8 @@ const BINDINGS: Binding[] = [
   { code: 'KeyE', action: 'tool.eraser' },
   { code: 'KeyV', action: 'tool.select' },
   { code: 'KeyH', action: 'tool.hand' },
+  { code: 'PageUp', action: 'pagePrev' },
+  { code: 'PageDown', action: 'pageNext' },
   { code: 'Delete', action: 'edit.deleteSelection' },
   { code: 'Backspace', action: 'edit.deleteSelection' },
 ];
@@ -63,6 +65,13 @@ export function handleShortcut(e: KeyboardEvent, rt: AppRuntime): boolean {
   // מקש בודד (בלי Ctrl) לא יופעל כשיש Shift, כדי לא להתנגש בכתיבה עתידית.
   if (!binding.ctrl && e.shiftKey) return false;
   e.preventDefault();
+  if (binding.action === 'pagePrev' || binding.action === 'pageNext') {
+    const s = rt.board.getState();
+    const i = s.doc.pages.findIndex((p) => p.id === s.pageId);
+    const target = s.doc.pages[i + (binding.action === 'pageNext' ? 1 : -1)];
+    if (target) s.goToPage(target.id);
+    return true;
+  }
   if (binding.action === 'selectAll') {
     const s = rt.board.getState();
     s.setTool('select');

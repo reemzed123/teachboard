@@ -13,6 +13,8 @@ export interface Settings {
   theme: ThemePreference;
   /** מזהי פעולות לסרגל הגישה המהירה. null = מקום ריק. */
   quickAccess: (string | null)[];
+  /** סגירה אוטומטית של החלונית הצדדית כשמתחילים לכתוב על הלוח */
+  autoClosePanel: boolean;
 }
 
 export const DEFAULT_QUICK_ACCESS: readonly string[] = [
@@ -28,6 +30,7 @@ export function createDefaultSettings(): Settings {
     version: SETTINGS_VERSION,
     theme: 'system',
     quickAccess: normalizeQuickAccess(DEFAULT_QUICK_ACCESS, DEFAULT_QUICK_ACCESS),
+    autoClosePanel: true,
   };
 }
 
@@ -72,7 +75,10 @@ export function parseSettings(raw: unknown, knownActionIds: readonly string[]): 
     ? normalizeQuickAccess(obj.quickAccess, knownActionIds)
     : normalizeQuickAccess(DEFAULT_QUICK_ACCESS, knownActionIds);
 
-  return { version: SETTINGS_VERSION, theme, quickAccess };
+  const autoClosePanel =
+    typeof obj.autoClosePanel === 'boolean' ? obj.autoClosePanel : defaults.autoClosePanel;
+
+  return { version: SETTINGS_VERSION, theme, quickAccess, autoClosePanel };
 }
 
 /** מחליף את הפעולה במקום מסוים; אם היא כבר במקום אחר – המקום האחר מתפנה. */

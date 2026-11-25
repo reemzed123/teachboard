@@ -1,12 +1,20 @@
-import type { BoardDocument, BoardObject, ObjectId, Page, PageId } from './types';
+import type { BoardDocument, BoardObject, ObjectId, Page, PageId, PageProps } from './types';
 
 // כל שינוי במסמך הוא "פעולה" (Op) – נתון פשוט שאפשר לבצע, להפוך (לביטול)
 // ובעתיד גם לשמור ביומן לשחזור אחרי קריסה.
 
-export type Op =
+export type ObjectOp =
   | { type: 'add'; pageId: PageId; objects: BoardObject[]; index?: number }
   | { type: 'remove'; pageId: PageId; ids: ObjectId[] }
   | { type: 'replace'; pageId: PageId; objects: BoardObject[] };
+
+export type PageOp =
+  | { type: 'addPage'; page: Page; index: number }
+  | { type: 'removePage'; pageId: PageId }
+  | { type: 'movePage'; pageId: PageId; index: number }
+  | { type: 'setPageProps'; pageId: PageId; props: Partial<PageProps> };
+
+export type Op = ObjectOp | PageOp;
 
 function updatePage(doc: BoardDocument, pageId: PageId, fn: (page: Page) => Page): BoardDocument {
   let found = false;
@@ -22,6 +30,27 @@ function updatePage(doc: BoardDocument, pageId: PageId, fn: (page: Page) => Page
 /** מבצע פעולה ומחזיר מסמך חדש. המסמך המקורי לא משתנה. */
 export function applyOp(doc: BoardDocument, op: Op): BoardDocument {
   switch (op.type) {
+    case 'addPage': {
+      const pages = doc.pages.slice();
+      pages.splice(Math.min(Math.max(op.index, 0), pages.length), 0, op.page);
+      return { ...doc, pages };
+    }
+    case 'removePage': {
+      if (!doc.pages.some((p) => p.id === op.pageId))
+        throw new Error(`Page not found: ${op.pageId}`);
+      if (doc.pages.length <= 1) throw new Error('Cannot remove the last page');
+      return { ...doc, pages: doc.pages.filter((p) => p.id !== op.pageId) };
+    }
+    case 'movePage': {
+      const from = doc.pages.findIndex((p) => p.id === op.pageId);
+      if (from < 0) throw new Error(`Page not found: ${op.pageId}`);
+      const pages = doc.pages.slice();
+      const [page] = pages.splice(from, 1);
+      pages.splice(Math.min(Math.max(op.index, 0), pages.length), 0, page!);
+      return { ...doc, pages };
+    }
+    case 'setPageProps':
+      return updatePage(doc, op.pageId, (page) => ({ ...page, ...op.props }));
     case 'add':
       return updatePage(doc, op.pageId, (page) => {
         const objects = page.objects.slice();
@@ -62,9 +91,28 @@ export function invertOps(before: BoardDocument, ops: readonly Op[]): Op[] {
   const inverse: Op[] = [];
   let doc = before;
   for (const op of ops) {
+    if (op.type === 'addPage') {
+      inverse.push({ type: 'removePage', pageId: op.page.id });
+      doc = applyOp(doc, op);
+      continue;
+    }
     const page = findPage(doc, op.pageId);
     if (!page) throw new Error(`Page not found: ${op.pageId}`);
     switch (op.type) {
+      case 'removePage':
+        inverse.push({ type: 'addPage', page, index: doc.pages.indexOf(page) });
+        break;
+      case 'movePage':
+        inverse.push({ type: 'movePage', pageId: op.pageId, index: doc.pages.indexOf(page) });
+        break;
+      case 'setPageProps': {
+        const before: Partial<PageProps> = {};
+        for (const key of Object.keys(op.props) as (keyof PageProps)[]) {
+          (before as Record<string, unknown>)[key] = page[key];
+        }
+        inverse.push({ type: 'setPageProps', pageId: op.pageId, props: before });
+        break;
+      }
       case 'add':
         inverse.push({ type: 'remove', pageId: op.pageId, ids: op.objects.map((o) => o.id) });
         break;

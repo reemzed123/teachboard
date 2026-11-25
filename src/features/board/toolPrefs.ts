@@ -24,6 +24,7 @@ export const PEN_COLORS = [
   '#7c3aed',
   '#0891b2',
   '#be185d',
+  '#ffffff',
 ] as const;
 
 export const HIGHLIGHTER_COLORS = ['#facc15', '#4ade80', '#38bdf8', '#f472b6', '#fb923c'] as const;

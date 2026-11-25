@@ -13,6 +13,7 @@ export function SettingsPanel() {
   const saveFailed = useApp((s) => s.settingsSaveFailed);
   const setTheme = useApp((s) => s.setTheme);
   const setQuickAccess = useApp((s) => s.setQuickAccess);
+  const setAutoClosePanel = useApp((s) => s.setAutoClosePanel);
   const baseId = useId();
 
   return (
@@ -37,6 +38,18 @@ export function SettingsPanel() {
             {t(`settings.theme.${theme}`)}
           </label>
         ))}
+      </fieldset>
+
+      <fieldset className="tb-field">
+        <legend>{t('settings.behavior')}</legend>
+        <label className="tb-check">
+          <input
+            type="checkbox"
+            checked={settings.autoClosePanel}
+            onChange={(e) => setAutoClosePanel(e.target.checked)}
+          />
+          {t('settings.autoClosePanel')}
+        </label>
       </fieldset>
 
       <fieldset className="tb-field">

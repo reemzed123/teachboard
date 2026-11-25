@@ -44,11 +44,41 @@ export interface InkObject {
 
 export type BoardObject = InkObject;
 
+/** עמוד מחברת (עם גבולות) או לוח אינסופי. המעבר ביניהם לא מוחק תוכן. */
+export type PageLayout = 'bounded' | 'infinite';
+
+export type BackgroundPattern = 'none' | 'grid' | 'lines' | 'math' | 'axes';
+
+export interface PageBackground {
+  pattern: BackgroundPattern;
+  /** צבע הדף ‎#rrggbb */
+  color: string;
+  /** מרווח הקווים ביחידות לוח */
+  spacing: number;
+  /** תמונת רקע (מזהה משאב בקובץ השיעור), אם נבחרה */
+  imageAssetId?: string;
+}
+
 export interface Page {
   id: PageId;
+  layout: PageLayout;
+  /** גודל עמוד המחברת ביחידות לוח (משמש גם לייצוא PDF) */
+  size: { width: number; height: number };
+  background: PageBackground;
   /** סדר הרשימה = סדר השכבות (האחרון מצויר למעלה) */
   objects: BoardObject[];
 }
+
+/** A4 לרוחב, ב-96 נקודות לאינץ' – מתאים להדפסה ול-PDF. */
+export const DEFAULT_PAGE_SIZE = { width: 1123, height: 794 } as const;
+
+export const DEFAULT_BACKGROUND: PageBackground = {
+  pattern: 'none',
+  color: '#ffffff',
+  spacing: 32,
+};
+
+export type PageProps = Pick<Page, 'layout' | 'size' | 'background'>;
 
 export interface BoardDocument {
   version: typeof DOCUMENT_VERSION;

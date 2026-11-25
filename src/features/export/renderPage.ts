@@ -1,0 +1,64 @@
+import type { Rect } from '../../core/geometry/rect';
+import { unionRects } from '../../core/geometry/rect';
+import type { Page } from '../../core/document/types';
+import { inkBounds } from '../../core/ink/ink';
+import { drawPageBackground, type ImageSource } from '../../engine/render/BackgroundLayer';
+import { outlinePath } from '../../engine/render/inkOutline';
+
+// ציור עמוד שלם על משטח נפרד – לתמונות ממוזערות ולייצוא תמונה.
+
+/** האזור שמייצאים: עמוד מחברת – הדף; לוח אינסופי – התוכן עם שוליים. */
+export function exportArea(page: Page, margin = 40): Rect {
+  if (page.layout === 'bounded') return { x: 0, y: 0, ...page.size };
+  const content = unionRects(page.objects.map(inkBounds));
+  if (!content) return { x: 0, y: 0, ...page.size };
+  return {
+    x: content.x - margin,
+    y: content.y - margin,
+    width: content.width + margin * 2,
+    height: content.height + margin * 2,
+  };
+}
+
+export function drawInk(ctx: CanvasRenderingContext2D, page: Page): void {
+  for (const o of page.objects) {
+    ctx.save();
+    ctx.translate(o.transform.x, o.transform.y);
+    ctx.globalAlpha = o.style.opacity;
+    ctx.globalCompositeOperation = o.style.kind === 'highlighter' ? 'multiply' : 'source-over';
+    ctx.fillStyle = o.style.color;
+    ctx.fill(outlinePath(o.points, o.style.kind, o.style.width, o.pressure, true));
+    ctx.restore();
+  }
+}
+
+/** מצייר את העמוד על canvas חדש. scale = פיקסלים ליחידת לוח. */
+export function renderPageToCanvas(
+  page: Page,
+  scale: number,
+  images: ImageSource | null,
+): HTMLCanvasElement {
+  const area = exportArea(page);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(area.width * scale));
+  canvas.height = Math.max(1, Math.round(area.height * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D is not available');
+  ctx.setTransform(scale, 0, 0, scale, -area.x * scale, -area.y * scale);
+  drawPageBackground(ctx, page, area, scale, images, { shadow: false });
+  drawInk(ctx, page);
+  return canvas;
+}
+
+export async function canvasToBlob(canvas: HTMLCanvasElement, type = 'image/png'): Promise<Blob> {
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Export failed'))), type, 0.92),
+  );
+}
+
+/** תמונה ממוזערת קטנה (data URL) של העמוד הראשון. */
+export function thumbnailDataUrl(page: Page, images: ImageSource | null, maxWidth = 240): string {
+  const area = exportArea(page);
+  const scale = Math.min(maxWidth / area.width, 1);
+  return renderPageToCanvas(page, scale, images).toDataURL('image/jpeg', 0.7);
+}

@@ -7,6 +7,7 @@ import {
   type ViewState,
 } from '../features/board/boardStore';
 import type { ToolId } from '../features/board/toolPrefs';
+import { BackgroundLayer, type ImageSource } from './render/BackgroundLayer';
 import { InkLayer } from './render/InkLayer';
 import { LiveCanvas } from './render/LiveCanvas';
 import { EraserTool } from './tools/EraserTool';
@@ -38,6 +39,7 @@ export class BoardEngine {
   private stageEl = document.createElement('div');
   private stage: Konva.Stage;
   private ink = new InkLayer();
+  private background: BackgroundLayer;
   private live = new LiveCanvas();
   private overlay = document.createElement('canvas');
   private overlayCtx: CanvasRenderingContext2D;
@@ -61,11 +63,17 @@ export class BoardEngine {
   /** האם התקבל pointerrawupdate בקו הנוכחי (אם לא – עובדים עם pointermove הרגיל) */
   private rawSeen = false;
   private disposers: (() => void)[] = [];
+  /** כל עוד המורה לא הזיז/הגדיל ידנית – התצוגה מתאימה את עצמה לגודל המסך */
+  private autoFit = false;
 
   constructor(
     private host: HTMLElement,
     private store: BoardStore,
+    images: ImageSource | null = null,
   ) {
+    this.background = new BackgroundLayer(images);
+    const offImages = images?.onChange?.(() => this.renderView());
+    if (offImages) this.disposers.push(offImages);
     host.classList.add('tb-board-host');
     this.stageEl.className = 'tb-board-stage';
     this.overlay.className = 'tb-board-overlay';
@@ -82,6 +90,7 @@ export class BoardEngine {
       width: this.width,
       height: this.height,
     });
+    this.stage.add(this.background.layer);
     this.stage.add(this.ink.layer);
 
     const ctx: ToolContext = {
@@ -101,8 +110,9 @@ export class BoardEngine {
 
     this.view = store.getState().view;
     this.renderedView = this.view;
-    this.resize();
     this.ink.sync(currentPage(store.getState()).objects);
+    this.resize();
+    this.restorePageView();
     this.updateCursor();
 
     this.listen();
@@ -152,9 +162,21 @@ export class BoardEngine {
   }
 
   private onStoreChange(s: BoardState, prev: BoardState) {
-    if (s.doc !== prev.doc || s.pageId !== prev.pageId) {
+    const pageChanged = s.pageId !== prev.pageId || s.docEpoch !== prev.docEpoch;
+    if (pageChanged) {
+      this.activeTool?.cancel();
+      this.activeTool = null;
+      this.activePointerId = null;
+    }
+    if (s.doc !== prev.doc || pageChanged) {
       this.ink.sync(currentPage(s).objects);
       this.requestOverlay();
+    }
+    if (pageChanged) {
+      this.restorePageView();
+    } else if (currentPage(s) !== currentPage(prev)) {
+      // רקע/סוג העמוד השתנו – מציירים מחדש את הרקע.
+      this.renderView();
     }
     if (s.selection !== prev.selection) this.requestOverlay();
     if (s.tool !== prev.tool) {
@@ -168,6 +190,7 @@ export class BoardEngine {
     if (s.prefs !== prev.prefs) this.requestOverlay();
     // שינוי תצוגה שהגיע מבחוץ (כפתורי זום) – מציירים מיד.
     if (s.view !== prev.view && s.view !== this.view) {
+      this.autoFit = false;
       this.view = s.view;
       this.renderView();
     }
@@ -205,6 +228,9 @@ export class BoardEngine {
   }
 
   private onPointerDown(e: PointerEvent) {
+    // מרגע שהמורה מתחיל לעבוד על הלוח – התצוגה לא זזה מעצמה
+    // (למשל כשהחלונית נסגרת אוטומטית והלוח מתרחב, באמצע קו).
+    this.autoFit = false;
     this.hostRect = this.host.getBoundingClientRect();
     const state = this.store.getState();
     if (e.pointerType === 'pen') state.markPen(e.pressure > 0 && e.pressure !== 0.5);
@@ -399,13 +425,17 @@ export class BoardEngine {
    * ומציירים מחדש בחדות רק מדי פעם ובסוף התנועה.
    */
   private setViewLive(view: ViewState) {
+    this.autoFit = false;
     this.view = view;
     this.store.getState().setView(view);
     const r = this.renderedView;
     const k = view.scale / r.scale;
-    const canvas = this.ink.layer.getNativeCanvasElement();
-    canvas.style.transformOrigin = '0 0';
-    canvas.style.transform = `matrix(${k},0,0,${k},${view.x - r.x * k},${view.y - r.y * k})`;
+    const transform = `matrix(${k},0,0,${k},${view.x - r.x * k},${view.y - r.y * k})`;
+    for (const layer of [this.background.layer, this.ink.layer]) {
+      const canvas = layer.getNativeCanvasElement();
+      canvas.style.transformOrigin = '0 0';
+      canvas.style.transform = transform;
+    }
     this.requestOverlay();
 
     const now = performance.now();
@@ -424,6 +454,11 @@ export class BoardEngine {
     this.stage.position({ x: v.x, y: v.y });
     this.stage.scale({ x: v.scale, y: v.scale });
     const visible = visibleBoardRect(v, this.width, this.height);
+    const page = currentPage(this.store.getState());
+    this.host.dataset.layout = page.layout;
+    this.background.update(page, visible, v.scale);
+    this.background.layer.draw();
+    this.background.layer.getNativeCanvasElement().style.transform = '';
     this.ink.setViewRect(inflate(visible, 64 / v.scale));
     this.ink.layer.draw();
     this.ink.layer.getNativeCanvasElement().style.transform = '';
@@ -443,7 +478,8 @@ export class BoardEngine {
     this.overlay.height = Math.round(this.height * dpr);
     this.overlay.style.width = `${this.width}px`;
     this.overlay.style.height = `${this.height}px`;
-    this.renderView();
+    if (this.autoFit) this.fitContent();
+    else this.renderView();
   }
 
   private requestOverlay() {
@@ -482,20 +518,49 @@ export class BoardEngine {
   }
 
   zoomBy(factor: number) {
+    this.autoFit = false;
     this.setView(zoomAt(this.view, this.width / 2, this.height / 2, this.view.scale * factor));
   }
 
   zoomTo(scale: number) {
+    this.autoFit = false;
     this.setView(zoomAt(this.view, this.width / 2, this.height / 2, scale));
   }
 
-  /** מתאים את התצוגה כך שכל התוכן ייראה. בלוח ריק – חוזר להתחלה ב-100%. */
+  /**
+   * התאמה למסך: בעמוד מחברת – כל העמוד (וגם תוכן שחורג ממנו);
+   * בלוח אינסופי – כל התוכן, ובלוח ריק – חזרה להתחלה ב-100%.
+   */
   fitContent() {
-    const objects = currentPage(this.store.getState()).objects;
-    const bounds = unionRects(
-      objects.map((o) => this.ink.boundsOf(o.id)).filter((r): r is Rect => !!r),
+    const page = currentPage(this.store.getState());
+    const parts = page.objects.map((o) => this.ink.boundsOf(o.id)).filter((r): r is Rect => !!r);
+    if (page.layout === 'bounded') parts.push({ x: 0, y: 0, ...page.size });
+    const bounds = unionRects(parts);
+    // משאירים מקום לסרגלי העמודים והזום בתחתית.
+    const bottomBars = 56;
+    this.setView(
+      bounds
+        ? fitRect(bounds, this.width, Math.max(100, this.height - bottomBars), 20, 4)
+        : { x: 0, y: 0, scale: 1 },
     );
-    this.setView(bounds ? fitRect(bounds, this.width, this.height) : { x: 0, y: 0, scale: 1 });
+    this.autoFit = true;
+  }
+
+  /** חזרה לתצוגה האחרונה של העמוד, או התאמה למסך אם אין. */
+  private restorePageView() {
+    const s = this.store.getState();
+    const saved = s.pageViews[s.pageId];
+    if (saved) {
+      this.autoFit = false;
+      this.setView(saved);
+      return;
+    }
+    const page = currentPage(s);
+    if (page.layout === 'bounded' || page.objects.length > 0) this.fitContent();
+    else {
+      this.autoFit = false;
+      this.setView({ x: this.width / 2, y: this.height / 2, scale: 1 });
+    }
   }
 
   get objectCount(): number {

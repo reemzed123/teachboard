@@ -1,11 +1,17 @@
 import type { BoardEngine } from '../engine/BoardEngine';
 import type { BoardStore } from '../features/board/boardStore';
+import type { AssetCache } from '../features/lessons/assetCache';
+import type { LessonStore } from '../features/lessons/lessonController';
+import type { LessonRepository } from '../platform/types';
 import type { AppStore } from './store';
 
 /** כל מה שפעולה (לחצן או קיצור מקלדת) צריכה כדי לפעול. */
 export interface AppRuntime {
   app: AppStore;
   board: BoardStore;
+  lessons: LessonStore;
+  repo: LessonRepository;
+  assets: AssetCache;
   /** המנוע קיים רק כשהלוח מוצג */
   engine: BoardEngine | null;
 }

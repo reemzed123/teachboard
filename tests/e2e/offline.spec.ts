@@ -29,5 +29,17 @@ test('works fully offline after the first visit', async ({ page, context }) => {
   });
   expect(fontOk).toBe(true);
 
+  // ציור ושמירה בלי אינטרנט – והתוכן נשאר אחרי רענון
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('save-status')).toHaveAttribute('data-status', 'saved');
+  const box = (await page.getByTestId('board').boundingBox())!;
+  await page.mouse.move(box.x + 100, box.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 300, box.y + 240, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.getByTestId('save-status')).toHaveAttribute('data-status', 'saved');
+  await page.reload();
+  await expect(page.getByTestId('board')).toHaveAttribute('data-object-count', '1');
+
   await context.setOffline(false);
 });

@@ -19,6 +19,6 @@ export const CATEGORIES: readonly CategoryDef[] = [
   { id: 'geometry', labelKey: 'category.geometry', plannedPhase: 5 },
   { id: 'pdf', labelKey: 'category.pdf', plannedPhase: 6 },
   { id: 'teaching', labelKey: 'category.teaching', plannedPhase: 7 },
-  { id: 'templates', labelKey: 'category.templates', plannedPhase: 3 },
-  { id: 'files', labelKey: 'category.files', plannedPhase: 3 },
+  { id: 'templates', labelKey: 'category.templates', plannedPhase: 3, available: true },
+  { id: 'files', labelKey: 'category.files', plannedPhase: 3, available: true },
 ];
