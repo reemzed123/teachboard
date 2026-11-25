@@ -11,14 +11,14 @@ export interface InputPoint {
   /** 0–1. כשאין מידע לחץ: 0.5 */
   pressure: number;
   pointerType: string;
+  /** זמן האירוע במילישניות */
+  t: number;
 }
 
 export interface PointerSample {
   point: InputPoint;
   /** כל הנקודות שנאספו מאז האירוע הקודם (קלט עט מדויק יותר) */
   coalesced: InputPoint[];
-  /** נקודות חזויות (להקטנת תחושת ההשהיה) – לא נשמרות */
-  predicted: InputPoint[];
   shiftKey: boolean;
 }
 

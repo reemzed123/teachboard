@@ -56,6 +56,13 @@ export const he = {
   'drawing.pressure.detected': 'זוהה עט עם לחץ.',
   'drawing.pressure.notDetected':
     'זוהה עט, אבל בלי מידע לחץ. בלוחות Huion יש להפעיל "Windows Ink" בתוכנת הדרייבר.',
+  'drawing.smoothing': 'החלקת כתב יד',
+  'drawing.smoothing.help':
+    'מייצבת רעד ומעגלת את הקו. בהרמת העט מוסרים גם "ווים" קטנים בתחילת ובסוף הקו.',
+  'drawing.smoothing.0': 'ללא',
+  'drawing.smoothing.1': 'עדינה',
+  'drawing.smoothing.2': 'רגילה',
+  'drawing.smoothing.3': 'חזקה',
   'drawing.eraserMode': 'סוג מחיקה',
   'drawing.eraserMode.stroke': 'קווים שלמים',
   'drawing.eraserMode.area': 'אזור (חותך קווים)',

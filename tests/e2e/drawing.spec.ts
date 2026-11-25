@@ -300,3 +300,39 @@ test('performance: 5,000 strokes on the board stay responsive', async ({ page })
   await drawMouse(page, wave(60, 100));
   await expect.poll(() => count(page)).toBe('5002');
 });
+
+test('live stroke appears while writing (before lifting the pen) and clears after', async ({
+  page,
+}) => {
+  const liveHasInk = () =>
+    page.evaluate(() => {
+      const c = document.querySelector('.tb-live-canvas') as HTMLCanvasElement;
+      const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+      for (let i = 3; i < d.length; i += 4) if (d[i]! > 0) return true;
+      return false;
+    });
+  await dispatchPointer(page, 'pointerdown', 100, 100, { pointerType: 'pen', pressure: 0.5 });
+  for (let i = 1; i <= 10; i++) {
+    await dispatchPointer(page, 'pointermove', 100 + i * 10, 100 + i * 3, {
+      pointerType: 'pen',
+      pressure: 0.6,
+    });
+  }
+  expect(await liveHasInk()).toBe(true);
+  expect(await count(page)).toBe('0');
+  await dispatchPointer(page, 'pointerup', 200, 130, { pointerType: 'pen' });
+  await expect.poll(() => count(page)).toBe('1');
+  expect(await liveHasInk()).toBe(false);
+});
+
+test('handwriting smoothing level is selectable and remembered', async ({ page }) => {
+  await page.getByRole('button', { name: 'ציור וכתיבה' }).click();
+  const group = page.getByRole('radiogroup', { name: 'החלקת כתב יד' });
+  await expect(group.getByRole('radio', { name: 'רגילה' })).toHaveAttribute('aria-checked', 'true');
+  await group.getByRole('radio', { name: 'חזקה' }).click();
+  await page.reload();
+  await page.getByRole('button', { name: 'ציור וכתיבה' }).click();
+  await expect(
+    page.getByRole('radiogroup', { name: 'החלקת כתב יד' }).getByRole('radio', { name: 'חזקה' }),
+  ).toHaveAttribute('aria-checked', 'true');
+});

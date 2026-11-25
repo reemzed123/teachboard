@@ -1,3 +1,5 @@
+import type { SmoothingLevel } from '../../core/ink/smoothing';
+
 // העדפות הכלים (צבע, עובי וכו') – נזכרות בין פתיחות של התוכנה.
 
 export type ToolId = 'select' | 'pen' | 'highlighter' | 'eraser' | 'hand';
@@ -9,6 +11,8 @@ export interface ToolPrefs {
   eraser: { mode: EraserMode; size: number };
   /** שימוש בלחץ העט, כשהחומרה מדווחת עליו */
   usePressure: boolean;
+  /** החלקת כתב יד: 0 ללא, 1 עדינה, 2 רגילה, 3 חזקה */
+  smoothing: SmoothingLevel;
 }
 
 export const PEN_COLORS = [
@@ -36,6 +40,7 @@ export function defaultToolPrefs(): ToolPrefs {
     highlighter: { color: HIGHLIGHTER_COLORS[0], width: 22 },
     eraser: { mode: 'stroke', size: 24 },
     usePressure: true,
+    smoothing: 2,
   };
 }
 
@@ -68,5 +73,8 @@ export function parseToolPrefs(raw: unknown): ToolPrefs {
       typeof (raw as Record<string, unknown>).usePressure === 'boolean'
         ? ((raw as Record<string, unknown>).usePressure as boolean)
         : d.usePressure,
+    smoothing: [0, 1, 2, 3].includes((raw as Record<string, unknown>).smoothing as number)
+      ? ((raw as Record<string, unknown>).smoothing as SmoothingLevel)
+      : d.smoothing,
   };
 }

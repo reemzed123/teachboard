@@ -1,6 +1,9 @@
 import { getStroke, type StrokeOptions } from 'perfect-freehand';
 import type { InkKind } from '../../core/document/types';
 
+/** כמה הלחץ משפיע על העובי (0 = לא משפיע) */
+export const PEN_THINNING = 0.6;
+
 // הופך את נקודות המרכז של הקו (עם לחץ) לצורה ממולאת – כך נוצרת תחושת כתיבה טבעית.
 
 export function strokeOptions(
@@ -14,16 +17,18 @@ export function strokeOptions(
       size: width,
       thinning: 0,
       smoothing: 0.5,
-      streamline: 0.45,
+      streamline: 0,
       simulatePressure: false,
       last,
     };
   }
+  // בלי "streamline": ההחלקה כבר נעשתה בזמן הכתיבה ובייפוי (core/ink/smoothing),
+  // ו-streamline גורם לקו "להיגרר" אחרי העט.
   return {
     size: width,
-    thinning: pressure ? 0.6 : 0,
+    thinning: pressure ? PEN_THINNING : 0,
     smoothing: 0.5,
-    streamline: 0.32,
+    streamline: 0,
     simulatePressure: false,
     last,
   };

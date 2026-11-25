@@ -14,6 +14,7 @@ import {
 import { t } from '../i18n';
 import type { MessageKey } from '../i18n/he';
 import { ACTIONS, actionTooltip } from '../app/actions';
+import { SMOOTHING_LEVELS } from '../core/ink/smoothing';
 import { ConfirmDialog } from './ConfirmDialog';
 import { SidePanel } from './SidePanel';
 
@@ -136,6 +137,26 @@ export function DrawingPanel() {
             }
           />
         </>
+      )}
+
+      {(tool === 'pen' || tool === 'highlighter') && (
+        <fieldset className="tb-field">
+          <legend>{t('drawing.smoothing')}</legend>
+          <div className="tb-segmented" role="radiogroup" aria-label={t('drawing.smoothing')}>
+            {SMOOTHING_LEVELS.map((level) => (
+              <button
+                key={level}
+                type="button"
+                role="radio"
+                aria-checked={prefs.smoothing === level}
+                onClick={() => updatePrefs((p) => ({ ...p, smoothing: level }))}
+              >
+                {t(`drawing.smoothing.${level}`)}
+              </button>
+            ))}
+          </div>
+          <p className="tb-help">{t('drawing.smoothing.help')}</p>
+        </fieldset>
       )}
 
       {tool === 'eraser' && (

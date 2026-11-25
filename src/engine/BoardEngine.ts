@@ -57,6 +57,9 @@ export class BoardEngine {
   private gesture: Gesture | null = null;
   private touches = new Map<number, { x: number; y: number }>();
   private spaceDown = false;
+  private readonly rawUpdates = typeof window !== 'undefined' && 'onpointerrawupdate' in window;
+  /** האם התקבל pointerrawupdate בקו הנוכחי (אם לא – עובדים עם pointermove הרגיל) */
+  private rawSeen = false;
   private disposers: (() => void)[] = [];
 
   constructor(
@@ -121,6 +124,12 @@ export class BoardEngine {
     const h = this.host;
     this.on(h, 'pointerdown', (e) => this.onPointerDown(e));
     this.on(h, 'pointermove', (e) => this.onPointerMove(e));
+    // pointerrawupdate: אירועי עט מיידיים, בלי לחכות לפריים הבא (פחות השהיה). קיים ב-Chrome/Edge.
+    if (this.rawUpdates) {
+      this.on(h, 'pointerrawupdate' as keyof HTMLElementEventMap, (e) =>
+        this.onRawUpdate(e as PointerEvent),
+      );
+    }
     this.on(h, 'pointerup', (e) => this.onPointerUp(e, false));
     this.on(h, 'pointercancel', (e) => this.onPointerUp(e, true));
     this.on(h, 'pointerleave', () => this.currentHandler()?.hover?.(null));
@@ -170,19 +179,24 @@ export class BoardEngine {
     const sx = e.clientX - this.hostRect.left;
     const sy = e.clientY - this.hostRect.top;
     const b = screenToBoard(this.view, sx, sy);
-    return { sx, sy, bx: b.x, by: b.y, pressure: e.pressure, pointerType: e.pointerType };
+    return {
+      sx,
+      sy,
+      bx: b.x,
+      by: b.y,
+      pressure: e.pressure,
+      pointerType: e.pointerType,
+      t: e.timeStamp,
+    };
   }
 
-  private sample(e: PointerEvent, withExtras: boolean): PointerSample {
+  private sample(e: PointerEvent, withCoalesced: boolean): PointerSample {
+    // "חיזוי" תנועת העט (getPredictedEvents) הוסר בכוונה: עם Windows Ink הוא גרם לרעד בקצה הקו.
     const coalesced =
-      withExtras && typeof e.getCoalescedEvents === 'function'
+      withCoalesced && typeof e.getCoalescedEvents === 'function'
         ? e.getCoalescedEvents().map((c) => this.point(c))
         : [];
-    const predicted =
-      withExtras && typeof e.getPredictedEvents === 'function'
-        ? e.getPredictedEvents().map((c) => this.point(c))
-        : [];
-    return { point: this.point(e), coalesced, predicted, shiftKey: e.shiftKey };
+    return { point: this.point(e), coalesced, shiftKey: e.shiftKey };
   }
 
   private currentHandler(): ToolHandler | null {
@@ -228,6 +242,7 @@ export class BoardEngine {
     this.capture(e.pointerId);
     this.activeTool = handler;
     this.activePointerId = e.pointerId;
+    this.rawSeen = false;
     handler.down(this.sample(e, false));
   }
 
@@ -248,11 +263,19 @@ export class BoardEngine {
       return;
     }
     if (this.activeTool && e.pointerId === this.activePointerId) {
-      this.activeTool.move(this.sample(e, true));
+      // כשמגיעים אירועי pointerrawupdate – התנועה כבר טופלה שם.
+      if (!this.rawSeen) this.activeTool.move(this.sample(e, true));
       return;
     }
     if (e.pointerType !== 'touch' && !this.activeTool) {
       this.currentHandler()?.hover?.(this.point(e));
+    }
+  }
+
+  private onRawUpdate(e: PointerEvent) {
+    if (this.activeTool && e.pointerId === this.activePointerId && !this.gesture) {
+      this.rawSeen = true;
+      this.activeTool.move(this.sample(e, true));
     }
   }
 
