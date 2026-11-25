@@ -99,7 +99,7 @@ describe('.board file', () => {
     const bytes = zipSync({ 'manifest.json': strToU8(manifest), 'document.json': big });
     expect(bytes.length).toBeLessThan(1_000_000);
     expect(code(() => unpackBoardFile(bytes))).toBe('tooLarge');
-  });
+  }, 60_000); // בונה קובץ של 200MB בזיכרון – איטי במחשבי הבדיקה של GitHub
 
   it('drops a background image that is not really an image', () => {
     const doc = sampleDoc();
