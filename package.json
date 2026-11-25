@@ -29,6 +29,8 @@
     "fflate": "0.8.3",
     "konva": "10.11.0",
     "lucide-react": "1.80.0",
+    "mathjax-full": "3.2.2",
+    "mathlive": "0.111.4",
     "pdf-lib": "1.17.1",
     "perfect-freehand": "1.2.3",
     "react": "19.3.1",
