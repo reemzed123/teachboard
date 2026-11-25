@@ -1,0 +1,60 @@
+import { create } from 'zustand';
+import {
+  parseSettings,
+  setQuickAccessSlot,
+  type Settings,
+  type ThemePreference,
+} from '../core/settings/settings';
+import type { SettingsStorage } from '../platform/types';
+import type { CategoryId } from '../features/categories';
+import { QUICK_ACTION_IDS } from './actionIds';
+
+export type PanelId = CategoryId | 'settings';
+
+export interface AppState {
+  settings: Settings;
+  /** true אם השמירה האחרונה של ההגדרות נכשלה. */
+  settingsSaveFailed: boolean;
+  openPanel: PanelId | null;
+  categoryBarVisible: boolean;
+  focusMode: boolean;
+
+  setTheme(theme: ThemePreference): void;
+  setQuickAccess(index: number, actionId: string | null): void;
+  togglePanel(panel: PanelId): void;
+  closePanel(): void;
+  toggleCategoryBar(): void;
+  setFocusMode(on: boolean): void;
+}
+
+export function createAppStore(storage: SettingsStorage) {
+  const initial = parseSettings(storage.load(), QUICK_ACTION_IDS);
+
+  return create<AppState>()((set, get) => {
+    const updateSettings = (next: Settings) => {
+      const ok = storage.save(next);
+      set({ settings: next, settingsSaveFailed: !ok });
+    };
+
+    return {
+      settings: initial,
+      settingsSaveFailed: false,
+      openPanel: null,
+      categoryBarVisible: true,
+      focusMode: false,
+
+      setTheme: (theme) => updateSettings({ ...get().settings, theme }),
+      setQuickAccess: (index, actionId) =>
+        updateSettings({
+          ...get().settings,
+          quickAccess: setQuickAccessSlot(get().settings.quickAccess, index, actionId),
+        }),
+      togglePanel: (panel) => set({ openPanel: get().openPanel === panel ? null : panel }),
+      closePanel: () => set({ openPanel: null }),
+      toggleCategoryBar: () => set({ categoryBarVisible: !get().categoryBarVisible }),
+      setFocusMode: (on) => set({ focusMode: on, openPanel: on ? null : get().openPanel }),
+    };
+  });
+}
+
+export type AppStore = ReturnType<typeof createAppStore>;

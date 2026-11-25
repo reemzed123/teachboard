@@ -1,24 +1,44 @@
+/* ===== ערכת צבעים ===== */
 :root {
-  --tb-bg: #f7f8fa;
+  --tb-bg: #eef1f5;
   --tb-surface: #ffffff;
+  --tb-surface-2: #f6f8fa;
   --tb-text: #1c2430;
   --tb-text-muted: #5b6573;
   --tb-accent: #2563eb;
+  --tb-accent-soft: #e3ecfd;
   --tb-border: #dde2e8;
-  font-family: system-ui, 'Segoe UI', Arial, sans-serif;
+  --tb-warning-bg: #fff4d6;
+  --tb-warning-text: #6b4a00;
+  --tb-tooltip-bg: #1c2430;
+  --tb-tooltip-text: #ffffff;
+  --tb-shadow: 0 1px 3px rgb(16 24 40 / 0.08), 0 4px 12px rgb(16 24 40 / 0.06);
+
+  --tb-topbar-h: 52px;
+  --tb-catbar-w: 60px;
+  --tb-panel-w: 300px;
+  --tb-btn: 44px;
+  --tb-radius: 10px;
+
+  font-family: 'Heebo Variable', 'Segoe UI', Arial, sans-serif;
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --tb-bg: #14181e;
-    --tb-surface: #1c222a;
-    --tb-text: #e6e9ee;
-    --tb-text-muted: #9aa4b2;
-    --tb-accent: #6d9cff;
-    --tb-border: #2c3440;
-    color-scheme: dark;
-  }
+:root[data-theme='dark'] {
+  --tb-bg: #11151a;
+  --tb-surface: #1b2129;
+  --tb-surface-2: #222a33;
+  --tb-text: #e6e9ee;
+  --tb-text-muted: #9aa4b2;
+  --tb-accent: #7aa5ff;
+  --tb-accent-soft: #24324d;
+  --tb-border: #2c3440;
+  --tb-warning-bg: #3a2f12;
+  --tb-warning-text: #f3d68a;
+  --tb-tooltip-bg: #e6e9ee;
+  --tb-tooltip-text: #11151a;
+  --tb-shadow: 0 1px 3px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
+  color-scheme: dark;
 }
 
 * {
@@ -35,4 +55,354 @@ body,
 body {
   background: var(--tb-bg);
   color: var(--tb-text);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+/* ===== מבנה ראשי ===== */
+.tb-app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tb-main {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* ===== סרגל עליון ===== */
+.tb-topbar {
+  height: var(--tb-topbar-h);
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-inline: 12px;
+  background: var(--tb-surface);
+  border-bottom: 1px solid var(--tb-border);
+  position: relative;
+  z-index: 3;
+}
+
+.tb-brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.01em;
+  min-width: calc(var(--tb-catbar-w) - 12px);
+}
+
+.tb-quick {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--tb-surface-2);
+  border: 1px solid var(--tb-border);
+  border-radius: calc(var(--tb-radius) + 3px);
+}
+
+.tb-topbar-end {
+  margin-inline-start: auto;
+  display: flex;
+  gap: 4px;
+}
+
+/* ===== סרגל קטגוריות ===== */
+.tb-catbar {
+  width: var(--tb-catbar-w);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-block: 10px;
+  background: var(--tb-surface);
+  border-inline-end: 1px solid var(--tb-border);
+  z-index: 3;
+}
+
+/* ===== חלונית צד ===== */
+.tb-panel {
+  width: var(--tb-panel-w);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--tb-surface);
+  border-inline-end: 1px solid var(--tb-border);
+  z-index: 2;
+  animation: tb-panel-in 140ms ease-out;
+}
+
+@keyframes tb-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
+.tb-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 8px 8px;
+  padding-inline-start: 16px;
+  border-bottom: 1px solid var(--tb-border);
+}
+
+.tb-panel-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.tb-panel-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.tb-field {
+  border: 0;
+  padding: 0;
+  margin: 0 0 24px;
+}
+
+.tb-field legend {
+  font-weight: 600;
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+.tb-help {
+  margin: 0 0 12px;
+  color: var(--tb-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.tb-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.tb-radio input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--tb-accent);
+}
+
+.tb-select-row {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tb-select-row select {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding-inline: 8px;
+  background: var(--tb-surface-2);
+  border: 1px solid var(--tb-border);
+  border-radius: 8px;
+}
+
+.tb-warning {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--tb-warning-bg);
+  color: var(--tb-warning-text);
+  font-size: 0.92rem;
+}
+
+/* ===== אזור עבודה ===== */
+.tb-workspace {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  background: var(--tb-bg);
+}
+
+.tb-workspace-note {
+  margin: 16px;
+  color: var(--tb-text-muted);
+  text-align: center;
+}
+
+/* ===== לחצנים ===== */
+.tb-icon-btn {
+  position: relative;
+  width: var(--tb-btn);
+  height: var(--tb-btn);
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--tb-radius);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+  touch-action: manipulation;
+}
+
+.tb-icon-btn:hover {
+  background: var(--tb-surface-2);
+}
+
+.tb-quick .tb-icon-btn:hover {
+  background: var(--tb-surface);
+}
+
+.tb-icon-btn[aria-pressed='true'] {
+  background: var(--tb-accent-soft);
+  color: var(--tb-accent);
+}
+
+.tb-icon-btn:focus-visible,
+.tb-btn:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--tb-accent);
+  outline-offset: 2px;
+}
+
+.tb-btn {
+  min-height: 36px;
+  padding-inline: 14px;
+  border: 1px solid var(--tb-border);
+  border-radius: 8px;
+  background: var(--tb-surface);
+  cursor: pointer;
+}
+
+.tb-btn-primary {
+  background: var(--tb-accent);
+  border-color: var(--tb-accent);
+  color: #fff;
+}
+
+:root[data-theme='dark'] .tb-btn-primary {
+  color: #0b1220;
+}
+
+/* ===== הסבר בריחוף ===== */
+.tb-icon-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 10;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: var(--tb-tooltip-bg);
+  color: var(--tb-tooltip-text);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 100ms ease;
+  transition-delay: 0ms;
+}
+
+.tb-icon-btn:hover::after,
+.tb-icon-btn:focus-visible::after {
+  opacity: 1;
+  transition-delay: 350ms;
+}
+
+.tb-icon-btn[data-tooltip-side='below']::after {
+  top: calc(100% + 6px);
+  inset-inline-start: 50%;
+  translate: 50% 0;
+}
+
+.tb-icon-btn[data-tooltip-side='end']::after {
+  top: 50%;
+  translate: 0 -50%;
+  inset-inline-start: calc(100% + 8px);
+}
+
+/* ===== מצב הסתרת סרגלים ===== */
+.tb-focus-restore {
+  position: fixed;
+  top: 10px;
+  inset-inline-start: 10px;
+  z-index: 5;
+  background: var(--tb-surface);
+  box-shadow: var(--tb-shadow);
+  opacity: 0.55;
+}
+
+.tb-focus-restore:hover,
+.tb-focus-restore:focus-visible {
+  opacity: 1;
+  background: var(--tb-surface);
+}
+
+/* ===== הודעת עדכון ===== */
+.tb-toast {
+  position: fixed;
+  bottom: 16px;
+  inset-inline: 16px;
+  margin-inline: auto;
+  max-width: 460px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius);
+  box-shadow: var(--tb-shadow);
+  z-index: 20;
+}
+
+.tb-toast span {
+  flex: 1;
+  min-width: 180px;
+}
+
+/* ===== מסכים קטנים: החלונית מרחפת מעל הלוח במקום לדחוק אותו ===== */
+@media (max-width: 760px) {
+  :root {
+    --tb-catbar-w: 54px;
+    --tb-panel-w: min(300px, calc(100vw - var(--tb-catbar-w) - 16px));
+  }
+
+  .tb-brand {
+    display: none;
+  }
+
+  .tb-panel {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--tb-catbar-w);
+    box-shadow: var(--tb-shadow);
+  }
+
+  .tb-app:not(:has(.tb-catbar)) .tb-panel {
+    inset-inline-start: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tb-panel {
+    animation: none;
+  }
 }

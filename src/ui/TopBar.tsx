@@ -1,0 +1,26 @@
+import { Settings as SettingsIcon } from 'lucide-react';
+import { useApp } from '../app/StoreContext';
+import { t } from '../i18n';
+import { IconButton } from './IconButton';
+import { QuickAccessBar } from './QuickAccessBar';
+
+export function TopBar() {
+  const openPanel = useApp((s) => s.openPanel);
+  const togglePanel = useApp((s) => s.togglePanel);
+
+  return (
+    <header className="tb-topbar" aria-label={t('topbar.label')}>
+      <div className="tb-brand">{t('app.name')}</div>
+      <QuickAccessBar />
+      <div className="tb-topbar-end">
+        <IconButton
+          icon={SettingsIcon}
+          label={t('action.settings')}
+          pressed={openPanel === 'settings'}
+          onClick={() => togglePanel('settings')}
+          data-action="settings"
+        />
+      </div>
+    </header>
+  );
+}

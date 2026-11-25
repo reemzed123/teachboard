@@ -23,7 +23,13 @@ export function getDirection(): 'rtl' | 'ltr' {
   return locales[current].dir;
 }
 
-/** מחזיר את הטקסט המתורגם עבור מפתח. */
-export function t(key: MessageKey): string {
-  return locales[current].messages[key];
+/** מחזיר את הטקסט המתורגם עבור מפתח, עם החלפת {שם} בערכים. */
+export function t(key: MessageKey, params?: Record<string, string | number>): string {
+  let text = locales[current].messages[key];
+  if (params) {
+    for (const [name, value] of Object.entries(params)) {
+      text = text.replaceAll(`{${name}}`, String(value));
+    }
+  }
+  return text;
 }
