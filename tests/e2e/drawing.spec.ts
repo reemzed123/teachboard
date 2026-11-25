@@ -353,3 +353,98 @@ test('handwriting smoothing level is selectable and remembered', async ({ page }
     page.getByRole('radiogroup', { name: 'החלקת כתב יד' }).getByRole('radio', { name: 'חזקה' }),
   ).toHaveAttribute('aria-checked', 'true');
 });
+
+/** האם יש דיו במשטח החי בנקודה (קואורדינטות הלוח במסך) */
+function liveInkAt(page: Page, x: number, y: number) {
+  return page.evaluate(
+    ([x, y]) => {
+      const c = document.querySelector('.tb-live-canvas') as HTMLCanvasElement;
+      const k = c.width / c.clientWidth;
+      const d = c.getContext('2d')!.getImageData(Math.round(x! * k), Math.round(y! * k), 1, 1).data;
+      return d[3]! > 0;
+    },
+    [x, y],
+  );
+}
+
+test('live stroke has no gaps while the pen is still down, in every direction', async ({
+  page,
+}) => {
+  const paths: [Pt, Pt][] = [
+    [
+      [100, 100],
+      [400, 100],
+    ], // ימינה
+    [
+      [400, 200],
+      [100, 200],
+    ], // שמאלה
+    [
+      [150, 250],
+      [150, 450],
+    ], // למטה
+    [
+      [300, 450],
+      [450, 300],
+    ], // באלכסון למעלה
+  ];
+  for (const [[x1, y1], [x2, y2]] of paths) {
+    await dispatchPointer(page, 'pointerdown', x1, y1, { pointerType: 'pen', pressure: 0.5 });
+    const n = 30;
+    for (let i = 1; i <= n; i++) {
+      await dispatchPointer(
+        page,
+        'pointermove',
+        x1 + ((x2 - x1) * i) / n,
+        y1 + ((y2 - y1) * i) / n,
+        {
+          pointerType: 'pen',
+          pressure: 0.5,
+        },
+      );
+    }
+    // בודקים לאורך הקו (לפני שחרור העט) שאין חורים
+    const holes: number[] = [];
+    for (let t = 0.1; t <= 0.9; t += 0.02) {
+      if (!(await liveInkAt(page, x1 + (x2 - x1) * t, y1 + (y2 - y1) * t))) holes.push(t);
+    }
+    expect(holes, `gaps on stroke ${x1},${y1} → ${x2},${y2}`).toEqual([]);
+    await dispatchPointer(page, 'pointerup', x2, y2, { pointerType: 'pen' });
+  }
+});
+
+test('stroke stays in place when the side panel closes as writing starts', async ({ page }) => {
+  // תצוגה מוגדלת ומוזזת (כמו אצל המורה – "התאמה לדף")
+  await page.evaluate(() =>
+    (window as any).__tb.runtime.board.getState().setView({ x: 40, y: 30, scale: 1.5 }),
+  );
+  await page.getByRole('button', { name: 'ציור וכתיבה' }).click();
+  await page.getByRole('button', { name: 'צבע #dc2626' }).click();
+  await dispatchPointer(page, 'pointerdown', 100, 300, { pointerType: 'pen', pressure: 0.5 });
+  // החלונית נסגרת והלוח מתרחב
+  await expect(page.getByRole('complementary')).toHaveCount(0);
+  await page.evaluate(
+    () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+  );
+  for (let i = 1; i <= 20; i++) {
+    await dispatchPointer(page, 'pointermove', 100 + i * 10, 300, {
+      pointerType: 'pen',
+      pressure: 0.5,
+    });
+  }
+  // הקו החי נמצא בדיוק במקום שבו העט נמצא – גם החלק שלפני שינוי הגודל – ובצבע שנבחר
+  expect(await liveInkAt(page, 105, 300)).toBe(true);
+  expect(await liveInkAt(page, 250, 300)).toBe(true);
+  expect(await liveInkAt(page, 250, 340)).toBe(false);
+  const color = await page.evaluate(() => {
+    const c = document.querySelector('.tb-live-canvas') as HTMLCanvasElement;
+    const k = c.width / c.clientWidth;
+    return [
+      ...c.getContext('2d')!.getImageData(Math.round(250 * k), Math.round(300 * k), 1, 1).data,
+    ];
+  });
+  expect(color[0]).toBeGreaterThan(150); // אדום
+  expect(color[2]).toBeLessThan(100);
+  await dispatchPointer(page, 'pointerup', 300, 300, { pointerType: 'pen' });
+  await expect.poll(() => count(page)).toBe('1');
+});

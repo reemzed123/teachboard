@@ -40,4 +40,6 @@ export interface ToolHandler {
   /** ציור עזר על שכבת העזר (סמן מחק, מלבן בחירה) */
   drawOverlay?(ctx: CanvasRenderingContext2D, view: ViewState): void;
   hover?(p: InputPoint | null): void;
+  /** המשטח החי נמחק (שינוי גודל) – מציירים מחדש את מה שבתהליך */
+  redrawLive?(): void;
 }

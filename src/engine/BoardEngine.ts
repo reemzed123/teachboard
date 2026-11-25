@@ -473,6 +473,7 @@ export class BoardEngine {
     this.height = Math.max(1, Math.round(this.hostRect.height));
     this.stage.size({ width: this.width, height: this.height });
     this.live.resize(this.width, this.height);
+    this.activeTool?.redrawLive?.();
     const dpr = window.devicePixelRatio || 1;
     this.overlay.width = Math.round(this.width * dpr);
     this.overlay.height = Math.round(this.height * dpr);

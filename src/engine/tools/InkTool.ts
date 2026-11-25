@@ -145,6 +145,24 @@ export class InkTool implements ToolHandler {
     this.ctx.live.clear();
   }
 
+  /** מצייר מחדש את כל הקו שנכתב עד עכשיו (אחרי שהמשטח נמחק בשינוי גודל). */
+  redrawLive(): void {
+    if (!this.active || this.points.length === 0) return;
+    const width = this.style().width;
+    const p = this.points;
+    this.ctx.live.dot(p[0]!, p[1]!, radiusForPressure(width, this.thinning, p[2]!));
+    for (let i = 3; i < p.length; i += 3) {
+      this.ctx.live.segment(
+        p[i - 3]!,
+        p[i - 2]!,
+        radiusForPressure(width, this.thinning, p[i - 1]!),
+        p[i]!,
+        p[i + 1]!,
+        radiusForPressure(width, this.thinning, p[i + 2]!),
+      );
+    }
+  }
+
   cancel(): void {
     this.active = false;
     this.points = [];

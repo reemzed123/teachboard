@@ -9,6 +9,8 @@ export class LiveCanvas {
   private width = 0;
   private height = 0;
   private dpr = 1;
+  /** הגדרות הקו החי – כדי להחזיר אותן אחרי שינוי גודל (שמאפס את המשטח) */
+  private stroke: { view: ViewState; color: string } | null = null;
 
   constructor() {
     this.canvas.className = 'tb-live-canvas';
@@ -27,9 +29,25 @@ export class LiveCanvas {
     this.canvas.height = Math.round(height * this.dpr);
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
+    // שינוי גודל מוחק את המשטח ומאפס את המיקום והצבע – מחזירים אותם.
+    if (this.stroke) this.applyStroke(this.stroke.view, this.stroke.color);
+  }
+
+  /** האם יש קו חי פעיל (שצריך לצייר מחדש אחרי שינוי גודל) */
+  get hasStroke(): boolean {
+    return this.stroke !== null;
+  }
+
+  private applyStroke(view: ViewState, color: string) {
+    const { ctx, dpr } = this;
+    ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, dpr * view.x, dpr * view.y);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   clear(): void {
+    this.stroke = null;
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.canvas.style.opacity = '';
@@ -44,11 +62,8 @@ export class LiveCanvas {
     this.clear();
     this.canvas.style.opacity = String(opacity);
     this.canvas.style.mixBlendMode = multiply ? 'multiply' : '';
-    const { ctx, dpr } = this;
-    ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, dpr * view.x, dpr * view.y);
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
+    this.stroke = { view, color };
+    this.applyStroke(view, color);
   }
 
   /** נקודה עגולה (תחילת קו). קואורדינטות לוח. */
@@ -68,17 +83,20 @@ export class LiveCanvas {
     const dx = bx - ax;
     const dy = by - ay;
     const len = Math.hypot(dx, dy);
-    ctx.beginPath();
+    // ה"צינור" והעיגול ממולאים בנפרד: אם ממלאים אותם יחד, במקום שהם חופפים
+    // ובכיוון הפוך הם מבטלים זה את זה – וזה יצר "חריצים" בקו בזמן הכתיבה.
     if (len > 0.0001) {
       const nx = -dy / len;
       const ny = dx / len;
+      ctx.beginPath();
       ctx.moveTo(ax + nx * ar, ay + ny * ar);
       ctx.lineTo(bx + nx * br, by + ny * br);
       ctx.lineTo(bx - nx * br, by - ny * br);
       ctx.lineTo(ax - nx * ar, ay - ny * ar);
       ctx.closePath();
+      ctx.fill();
     }
-    ctx.moveTo(bx + br, by);
+    ctx.beginPath();
     ctx.arc(bx, by, br, 0, Math.PI * 2);
     ctx.fill();
   }
