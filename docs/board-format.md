@@ -19,6 +19,9 @@
   - `type: "ink"` – כתב יד: `style {kind: pen|highlighter, color, width, opacity}`, `points` (שלשות x,y,לחץ ביחס ל-transform), `pressure`.
   - `type: "shape"` – קו/חץ: `kind: line|arrow`, `dx, dy` (נקודת הסוף ביחס להתחלה), `style {color, width, opacity, dash: solid|dashed|dotted}`, `arrowStart?`.
   - `type: "text"` – טקסט: `text` (עד 20,000 תווים, בלי תווי בקרה מלבד מעבר שורה), `fontSize`, `color`, `dir: rtl|ltr`, `bold?`, `width`, `height` (גודל התיבה כפי שנמדד).
+  - `type: "math"` – נוסחה: `latex` (עד 5,000 תווים), `color`, `fontSize`, `width`, `height`.
+  - `type: "graph"` – מערכת צירים: `width`, `height`, `range {xMin,xMax,yMin,yMax}`, `grid`, `showIntercepts`, `showIntersections`, `functions[] {id, latex, color, width, visible}` (עד 20). הביטויים מפוענחים בטוח – לא מורצים כקוד.
+  - `type: "table"` – טבלה: `rows` (מחרוזות; עד 200 שורות × 30 עמודות), `fontSize`, `color`, `cellWidth`, `cellHeight`.
 - סדר האובייקטים = סדר השכבות.
 - קבוצה = כל האובייקטים בעמוד עם אותו `groupId`.
 

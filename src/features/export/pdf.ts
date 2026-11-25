@@ -9,8 +9,16 @@ import {
   type PDFPage,
 } from 'pdf-lib';
 import { generatePattern, LINE_WIDTH_PX, patternColors } from '../../core/background/pattern';
-import type { BoardDocument, Page, ShapeObject, TextObject } from '../../core/document/types';
-import { arrowHeadSize, textLocalBounds } from '../../core/objects/geometry';
+import type {
+  BoardDocument,
+  GraphObject,
+  MathObject,
+  Page,
+  ShapeObject,
+  TableObject,
+  TextObject,
+} from '../../core/document/types';
+import { arrowHeadSize, localBounds } from '../../core/objects/geometry';
 import { dashPattern, drawObjectLocal } from '../../engine/render/drawObject';
 import { outlinePolygon, polygonToSvgPath } from '../../engine/render/inkOutline';
 import { canvasToBlob, exportArea } from './renderPage';
@@ -150,7 +158,8 @@ async function addPage(
     } else if (o.type === 'shape') {
       drawPdfShape(out, o, base);
     } else {
-      await drawPdfText(pdf, out, o, X, Y, k);
+      // טקסט, נוסחה, גרף וטבלה – כתמונה חדה (פי 4)
+      await drawPdfRaster(pdf, out, o, X, Y, k);
     }
   }
 }
@@ -205,15 +214,15 @@ function drawPdfShape(out: PDFPage, o: ShapeObject, base: PdfBase) {
  * טקסט ב-PDF: נשמר כתמונה ברזולוציה גבוהה (פי 4), כי ספריית ה-PDF לא יודעת לסדר
  * עברית מימין לשמאל. כך הטקסט נראה בדיוק כמו על המסך.
  */
-async function drawPdfText(
+async function drawPdfRaster(
   pdf: PDFDocument,
   out: PDFPage,
-  o: TextObject,
+  o: TextObject | MathObject | GraphObject | TableObject,
   X: (x: number) => number,
   Y: (y: number) => number,
   k: number,
 ) {
-  const b = textLocalBounds(o);
+  const b = localBounds(o);
   const res = 4 * o.transform.scale;
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.ceil(b.width * res));

@@ -7,6 +7,8 @@ import type {
 } from '../../core/document/types';
 import { arrowHeadSize } from '../../core/objects/geometry';
 import { outlinePath } from './inkOutline';
+import { drawGraph, drawTable } from './drawGraph';
+import { getMathImage } from './mathCache';
 
 // ציור אובייקט על canvas. אותו קוד משמש את המסך, ייצוא התמונה והתמונות הממוזערות –
 // כך מה שרואים הוא בדיוק מה שמיוצא.
@@ -94,11 +96,22 @@ export function drawObjectLocal(ctx: CanvasRenderingContext2D, o: BoardObject): 
     case 'text':
       drawText(ctx, o);
       break;
+    case 'math': {
+      const img = getMathImage(o.latex, o.color);
+      if (img) ctx.drawImage(img, 0, 0, o.width, o.height);
+      break;
+    }
+    case 'graph':
+      drawGraph(ctx, o);
+      break;
+    case 'table':
+      drawTable(ctx, o);
+      break;
   }
 }
 
 export function objectOpacity(o: BoardObject): number {
-  return o.type === 'text' ? 1 : o.style.opacity;
+  return o.type === 'ink' || o.type === 'shape' ? o.style.opacity : 1;
 }
 
 export function objectBlend(o: BoardObject): GlobalCompositeOperation {

@@ -41,5 +41,16 @@ test('works fully offline after the first visit', async ({ page, context }) => {
   await page.reload();
   await expect(page.getByTestId('board')).toHaveAttribute('data-object-count', '1');
 
+  // עורך הנוסחאות ושרטוט נוסחה – גם בלי אינטרנט
+  await page.getByRole('button', { name: 'מתמטיקה' }).click();
+  await page.getByRole('button', { name: 'נוסחה חדשה' }).click();
+  const field = page.getByTestId('formula-field');
+  await field.waitFor();
+  await page.waitForTimeout(150);
+  await field.click();
+  await page.keyboard.type('x^2');
+  await page.getByRole('button', { name: 'הוספה ללוח' }).click();
+  await expect(page.getByTestId('board')).toHaveAttribute('data-object-count', '2');
+
   await context.setOffline(false);
 });

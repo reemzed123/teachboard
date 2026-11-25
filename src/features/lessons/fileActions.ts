@@ -11,7 +11,7 @@ import { t } from '../../i18n';
 import { pickFile, saveFile } from '../../platform/web/files';
 import { currentPage } from '../board/boardStore';
 import { exportPdf } from '../export/pdf';
-import { canvasToBlob, renderPageToCanvas } from '../export/renderPage';
+import { canvasToBlob, prepareMath, renderPageToCanvas } from '../export/renderPage';
 
 // פעולות קבצים: שמירה/פתיחה של ‎.board, וייצוא תמונה ו-PDF.
 
@@ -92,6 +92,7 @@ function pageLabel(rt: AppRuntime): string {
 export async function exportPng(rt: AppRuntime): Promise<void> {
   const page = currentPage(rt.board.getState());
   await rt.assets.ensure(page.background.imageAssetId ? [page.background.imageAssetId] : []);
+  await prepareMath([page]);
   // פי 2 – חד גם בהקרנה ובהדפסה
   const blob = await canvasToBlob(renderPageToCanvas(page, 2, rt.assets));
   const title = `${rt.lessons.getState().title} - ${pageLabel(rt)}`;
@@ -122,6 +123,7 @@ export async function exportPdfFile(rt: AppRuntime, scope: 'page' | 'all'): Prom
   const s = rt.board.getState();
   const ids = scope === 'all' ? s.doc.pages.map((p) => p.id) : [s.pageId];
   const lessonTitle = rt.lessons.getState().title;
+  await prepareMath(s.doc.pages.filter((p) => ids.includes(p.id)));
   const bytes = await exportPdf(s.doc, ids, lessonTitle, {
     get: async (id) => {
       const a = await rt.repo.getAsset(id);

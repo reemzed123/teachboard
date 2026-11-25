@@ -89,7 +89,51 @@ export interface TextObject extends ObjectBase {
   height: number;
 }
 
-export type BoardObject = InkObject | ShapeObject | TextObject;
+/** נוסחה מתמטית (LaTeX). width/height = הגודל שנמדד בזמן היצירה. */
+export interface MathObject extends ObjectBase {
+  type: 'math';
+  latex: string;
+  color: string;
+  fontSize: number;
+  width: number;
+  height: number;
+}
+
+export interface GraphFunction {
+  id: string;
+  /** הביטוי, כפי שהמורה כתב (LaTeX או כתיב פשוט) */
+  latex: string;
+  color: string;
+  width: number;
+  visible: boolean;
+}
+
+/** מערכת צירים עם גרפים של פונקציות */
+export interface GraphObject extends ObjectBase {
+  type: 'graph';
+  width: number;
+  height: number;
+  range: { xMin: number; xMax: number; yMin: number; yMax: number };
+  grid: boolean;
+  /** נקודות חיתוך עם הצירים */
+  showIntercepts: boolean;
+  /** נקודות חיתוך בין הגרפים */
+  showIntersections: boolean;
+  functions: GraphFunction[];
+}
+
+/** טבלה (למשל טבלת ערכים). השורה הראשונה היא כותרת. */
+export interface TableObject extends ObjectBase {
+  type: 'table';
+  rows: string[][];
+  fontSize: number;
+  color: string;
+  cellWidth: number;
+  cellHeight: number;
+}
+
+export type BoardObject =
+  InkObject | ShapeObject | TextObject | MathObject | GraphObject | TableObject;
 
 /** עמוד מחברת (עם גבולות) או לוח אינסופי. המעבר ביניהם לא מוחק תוכן. */
 export type PageLayout = 'bounded' | 'infinite';

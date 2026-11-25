@@ -41,7 +41,7 @@ export class MathParseError extends Error {
 // ---------- פירוק לאסימונים ----------
 
 type Tok =
-  | { t: 'num'; v: number; p: number }
+  | { t: 'num'; v: number; p: number; raw: string }
   | { t: 'x'; p: number }
   | { t: 'const'; v: number; p: number }
   | { t: 'fn'; name: FnName | 'log'; p: number }
@@ -112,7 +112,7 @@ function tokenize(src: string): Tok[] {
       i++;
     } else if (/[0-9.]/.test(ch)) {
       const m = /^(\d+\.?\d*|\.\d+)/.exec(s.slice(i))!;
-      out.push({ t: 'num', v: Number(m[0]), p });
+      out.push({ t: 'num', v: Number(m[0]), p, raw: m[0] });
       i += m[0].length;
     } else if (ch === '\\') {
       const m = /^\\([A-Za-z]+|.)/.exec(s.slice(i));
@@ -309,11 +309,19 @@ class Parser {
     return n;
   }
 
-  /** ארגומנט של פקודה: {…} */
+  /** ארגומנט של פקודה: {…}, או תו בודד – כמו ב-TeX: \frac12 = ½ */
   private braced(): Node {
     const t = this.next();
     if (t.t === 'open' && t.v === '{') return this.group('{');
-    if (t.t === 'num') return { k: 'num', v: t.v };
+    if (t.t === 'num') {
+      if (t.raw.length > 1 && /^\d/.test(t.raw)) {
+        // רק הספרה הראשונה שייכת לארגומנט; השאר חוזר לרשימה
+        const rest = t.raw.slice(1);
+        this.toks.splice(this.i, 0, { t: 'num', v: Number(rest), p: t.p + 1, raw: rest });
+        return { k: 'num', v: Number(t.raw[0]) };
+      }
+      return { k: 'num', v: t.v };
+    }
     if (t.t === 'x') return { k: 'x' };
     throw new MathParseError('expected {', t.p);
   }

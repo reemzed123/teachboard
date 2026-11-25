@@ -37,6 +37,15 @@ test('makes no requests to external hosts', async ({ page, baseURL }) => {
   await page.waitForLoadState('networkidle');
   await page.getByRole('button', { name: 'הגדרות' }).click();
   await page.getByRole('button', { name: 'מתמטיקה' }).click();
+  // עורך הנוסחאות (גופנים) וציור נוסחה – בלי פנייה החוצה
+  await page.getByRole('button', { name: 'נוסחה חדשה' }).click();
+  const field = page.getByTestId('formula-field');
+  await field.waitFor();
+  await page.waitForTimeout(150);
+  await field.click();
+  await page.keyboard.type('\\frac');
+  await page.getByRole('button', { name: 'הוספה ללוח' }).click();
+  await page.waitForLoadState('networkidle');
   expect(external).toEqual([]);
 });
 

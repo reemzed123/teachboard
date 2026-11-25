@@ -15,7 +15,7 @@ export interface CategoryDef {
 // הסדר כאן הוא הסדר בסרגל.
 export const CATEGORIES: readonly CategoryDef[] = [
   { id: 'drawing', labelKey: 'category.drawing', plannedPhase: 2, available: true },
-  { id: 'math', labelKey: 'category.math', plannedPhase: 4 },
+  { id: 'math', labelKey: 'category.math', plannedPhase: 4, available: true },
   { id: 'geometry', labelKey: 'category.geometry', plannedPhase: 5 },
   { id: 'pdf', labelKey: 'category.pdf', plannedPhase: 6 },
   { id: 'teaching', labelKey: 'category.teaching', plannedPhase: 7 },

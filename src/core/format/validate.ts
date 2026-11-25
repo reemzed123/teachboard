@@ -11,6 +11,9 @@ import {
   type Page,
   type ShapeObject,
   type TextObject,
+  type MathObject,
+  type GraphObject,
+  type TableObject,
   type Transform,
   type PageBackground,
 } from '../document/types';
@@ -153,6 +156,114 @@ function cleanText(v: Obj, id: string): TextObject | null {
   return withCommon(obj, v);
 }
 
+/** טקסט חופשי: אורך מוגבל, בלי תווי בקרה (מלבד מעבר שורה) */
+function cleanString(v: unknown, max: number): string | null {
+  if (typeof v !== 'string' || v.length === 0 || v.length > max) return null;
+  return [...v].filter((ch) => ch === '\n' || ch.charCodeAt(0) >= 32).join('');
+}
+
+function cleanMath(v: Obj, id: string): MathObject | null {
+  const latex = cleanString(v.latex, 5000);
+  const c = color(v.color);
+  const fontSize = num(v.fontSize, 4, 1000);
+  const width = num(v.width, 0, 1e6);
+  const height = num(v.height, 0, 1e6);
+  if (!latex || !c || fontSize === null || width === null || height === null) return null;
+  return withCommon<MathObject>(
+    {
+      id,
+      type: 'math',
+      transform: cleanTransform(v.transform),
+      latex,
+      color: c,
+      fontSize,
+      width,
+      height,
+    },
+    v,
+  );
+}
+
+function cleanGraph(v: Obj, id: string): GraphObject | null {
+  const width = num(v.width, 20, 1e5);
+  const height = num(v.height, 20, 1e5);
+  const r = isObj(v.range) ? v.range : null;
+  if (width === null || height === null || !r) return null;
+  const R = 1e9;
+  const xMin = num(r.xMin, -R, R);
+  const xMax = num(r.xMax, -R, R);
+  const yMin = num(r.yMin, -R, R);
+  const yMax = num(r.yMax, -R, R);
+  if (
+    xMin === null ||
+    xMax === null ||
+    yMin === null ||
+    yMax === null ||
+    xMin >= xMax ||
+    yMin >= yMax
+  )
+    return null;
+  const fns = Array.isArray(v.functions) ? v.functions.slice(0, 20) : [];
+  const used = new Set<string>();
+  const functions = fns.flatMap((f) => {
+    if (!isObj(f)) return [];
+    const latex = cleanString(f.latex, 2000);
+    const c = color(f.color);
+    if (latex === null || !c) return [];
+    return [
+      {
+        id: cleanId(f.id, used, 'f'),
+        latex,
+        color: c,
+        width: num(f.width, 0.5, 20) ?? 2.5,
+        visible: f.visible !== false,
+      },
+    ];
+  });
+  return withCommon<GraphObject>(
+    {
+      id,
+      type: 'graph',
+      transform: cleanTransform(v.transform),
+      width,
+      height,
+      range: { xMin, xMax, yMin, yMax },
+      grid: v.grid !== false,
+      showIntercepts: v.showIntercepts === true,
+      showIntersections: v.showIntersections === true,
+      functions,
+    },
+    v,
+  );
+}
+
+function cleanTable(v: Obj, id: string): TableObject | null {
+  if (!Array.isArray(v.rows) || v.rows.length === 0 || v.rows.length > 200) return null;
+  const rows = v.rows.map((row) =>
+    Array.isArray(row)
+      ? row.slice(0, 30).map((c) => (typeof c === 'string' ? (cleanString(c, 200) ?? '') : ''))
+      : [],
+  );
+  const c = color(v.color);
+  const fontSize = num(v.fontSize, 4, 500);
+  const cellWidth = num(v.cellWidth, 4, 5000);
+  const cellHeight = num(v.cellHeight, 4, 5000);
+  if (!c || fontSize === null || cellWidth === null || cellHeight === null) return null;
+  return withCommon<TableObject>(
+    {
+      id,
+      type: 'table',
+      transform: cleanTransform(v.transform),
+      rows,
+      fontSize,
+      color: c,
+      cellWidth,
+      cellHeight,
+    },
+    v,
+  );
+}
+
 function cleanInk(v: Obj, id: string): InkObject | null {
   const st = isObj(v.style) ? v.style : null;
   if (!st) return null;
@@ -181,6 +292,16 @@ function cleanInk(v: Obj, id: string): InkObject | null {
   };
   return withCommon(obj, v);
 }
+
+/** בודק לכל סוג אובייקט. סוג שלא מופיע כאן מדולג. */
+const CLEANERS: Record<string, (v: Obj, id: string) => BoardObject | null> = {
+  ink: cleanInk,
+  shape: cleanShape,
+  text: cleanText,
+  math: cleanMath,
+  graph: cleanGraph,
+  table: cleanTable,
+};
 
 export interface ValidationReport {
   /** אובייקטים שדולגו כי לא היו תקינים או מסוג לא מוכר */
@@ -212,15 +333,7 @@ export function validateDocument(raw: unknown, report?: ValidationReport): Board
     total += list.length;
     if (total > LIMITS.objectsTotal) throw new FormatError('tooLarge', 'objects');
     for (const o of list) {
-      const cleaner = !isObj(o)
-        ? null
-        : o.type === 'ink'
-          ? cleanInk
-          : o.type === 'shape'
-            ? cleanShape
-            : o.type === 'text'
-              ? cleanText
-              : null;
+      const cleaner = isObj(o) && typeof o.type === 'string' ? CLEANERS[o.type] : undefined;
       if (!cleaner || !isObj(o)) {
         skipped++;
         continue;

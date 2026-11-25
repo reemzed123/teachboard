@@ -157,12 +157,19 @@ export class SelectTool implements ToolHandler {
     const insideSelection =
       b && p.bx >= b.x && p.bx <= b.x + b.width && p.by >= b.y && p.by <= b.y + b.height;
 
-    // לחיצה כפולה על טקסט → עריכה
-    if (hit?.type === 'text') {
+    // לחיצה כפולה: טקסט → עריכה; נוסחה → עורך הנוסחאות; גרף → חלונית המתמטיקה
+    if (hit && (hit.type === 'text' || hit.type === 'math' || hit.type === 'graph')) {
       const now = performance.now();
       if (this.lastClick.id === hit.id && now - this.lastClick.at < 400) {
         this.mode = { kind: 'idle' };
-        state.startTextEdit({ id: hit.id, x: hit.transform.x, y: hit.transform.y });
+        this.lastClick = { id: '', at: 0 };
+        if (hit.type === 'text')
+          state.startTextEdit({ id: hit.id, x: hit.transform.x, y: hit.transform.y });
+        else if (hit.type === 'math') state.openFormula(hit.id);
+        else {
+          state.setSelection([hit.id]);
+          state.requestPanel('math');
+        }
         return;
       }
       this.lastClick = { id: hit.id, at: now };

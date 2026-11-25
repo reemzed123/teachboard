@@ -10,6 +10,8 @@ import { DrawingPanel } from '../ui/DrawingPanel';
 import { TemplatesPanel } from '../ui/TemplatesPanel';
 import { FilesPanel } from '../ui/FilesPanel';
 import { Toast } from '../ui/Toast';
+import { MathPanel } from '../ui/MathPanel';
+import { FormulaDialog } from '../ui/FormulaDialog';
 import { handleShortcut } from './shortcuts';
 import { useApp, useRuntime } from './StoreContext';
 import { applyTheme } from './theme';
@@ -30,6 +32,18 @@ export function App() {
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
   }, [theme]);
+
+  // בקשה מהלוח לפתוח חלונית (למשל לחיצה כפולה על גרף)
+  useEffect(
+    () =>
+      rt.board.subscribe((s) => {
+        if (!s.panelRequest) return;
+        const app = rt.app.getState();
+        if (app.openPanel !== s.panelRequest) app.togglePanel(s.panelRequest as 'math');
+        s.requestPanel(null);
+      }),
+    [rt],
+  );
 
   // מקלדת: קיצורים, ו-Escape (ביטול בחירה → יציאה ממצב הסתרת סרגלים → סגירת חלונית).
   useEffect(() => {
@@ -60,10 +74,12 @@ export function App() {
         {!focusMode && category?.id === 'drawing' && <DrawingPanel />}
         {!focusMode && category?.id === 'templates' && <TemplatesPanel />}
         {!focusMode && category?.id === 'files' && <FilesPanel />}
+        {!focusMode && category?.id === 'math' && <MathPanel />}
         {!focusMode && category && !category.available && <CategoryPanel category={category} />}
         <Workspace />
       </div>
       {focusMode && <FocusRestoreButton />}
+      <FormulaDialog />
       <Toast />
     </div>
   );

@@ -4,6 +4,7 @@ import type { Page } from '../../core/document/types';
 import { objectBounds } from '../../core/objects/geometry';
 import { drawPageBackground, type ImageSource } from '../../engine/render/BackgroundLayer';
 import { drawObjectWorld } from '../../engine/render/drawObject';
+import { ensureMathImages } from '../../engine/render/mathCache';
 
 // ציור עמוד שלם על משטח נפרד – לתמונות ממוזערות ולייצוא תמונה.
 
@@ -18,6 +19,14 @@ export function exportArea(page: Page, margin = 40): Rect {
     width: content.width + margin * 2,
     height: content.height + margin * 2,
   };
+}
+
+/** מחכה שכל הנוסחאות בעמודים יהיו מוכנות לציור (לפני ייצוא/תמונה ממוזערת) */
+export async function prepareMath(pages: readonly Page[]): Promise<void> {
+  const items = pages.flatMap((p) =>
+    p.objects.filter((o) => o.type === 'math').map((o) => ({ latex: o.latex, color: o.color })),
+  );
+  if (items.length) await ensureMathImages(items);
 }
 
 export function drawObjects(ctx: CanvasRenderingContext2D, page: Page): void {

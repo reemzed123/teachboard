@@ -8,6 +8,7 @@ import {
 } from '../features/board/boardStore';
 import type { ToolId } from '../features/board/toolPrefs';
 import { BackgroundLayer, type ImageSource } from './render/BackgroundLayer';
+import { onMathReady } from './render/mathCache';
 import { ObjectLayer } from './render/ObjectLayer';
 import { LiveCanvas } from './render/LiveCanvas';
 import { EraserTool } from './tools/EraserTool';
@@ -76,6 +77,8 @@ export class BoardEngine {
     images: ImageSource | null = null,
   ) {
     this.background = new BackgroundLayer(images);
+    // נוסחה שסיימה להיטען – מציירים מחדש
+    this.disposers.push(onMathReady(() => this.objects.layer.batchDraw()));
     const offImages = images?.onChange?.(() => this.renderView());
     if (offImages) this.disposers.push(offImages);
     host.classList.add('tb-board-host');
@@ -369,7 +372,7 @@ export class BoardEngine {
     const typing =
       target &&
       (target.isContentEditable ||
-        ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target.tagName));
+        ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'MATH-FIELD'].includes(target.tagName));
     if (typing) return;
     e.preventDefault();
     if (this.spaceDown !== down) {

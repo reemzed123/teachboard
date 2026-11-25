@@ -72,6 +72,14 @@ export interface BoardState extends DocState {
   startTextEdit(edit: { id: string | null; x: number; y: number }): void;
   endTextEdit(): void;
 
+  /** עורך הנוסחאות: נוסחה קיימת (id) או חדשה (null) */
+  formulaEdit: { id: string | null } | null;
+  openFormula(id: string | null): void;
+  closeFormula(): void;
+  /** בקשה מהלוח לפתוח חלונית (למשל לחיצה כפולה על גרף) */
+  panelRequest: string | null;
+  requestPanel(panel: string | null): void;
+
   /** לוח העתקה פנימי (גם בין עמודים) */
   clipboard: BoardObject[] | null;
   pasteCount: number;
@@ -202,6 +210,18 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
       },
       endTextEdit() {
         set({ textEdit: null });
+      },
+
+      formulaEdit: null,
+      openFormula(id) {
+        set({ formulaEdit: { id } });
+      },
+      closeFormula() {
+        set({ formulaEdit: null });
+      },
+      panelRequest: null,
+      requestPanel(panel) {
+        set({ panelRequest: panel });
       },
 
       clipboard: null,

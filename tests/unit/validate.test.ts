@@ -170,3 +170,66 @@ describe('validate shapes and text', () => {
     expect(t.groupId).toBeUndefined();
   });
 });
+
+describe('validate math, graph and table', () => {
+  it('keeps valid objects and sanitizes them', () => {
+    const report = { skippedObjects: 0 };
+    const out = validateDocument(
+      docWith([
+        {
+          id: 'm',
+          type: 'math',
+          latex: '\\frac{1}{2}',
+          color: '#000000',
+          fontSize: 32,
+          width: 20,
+          height: 40,
+        },
+        {
+          id: 'g',
+          type: 'graph',
+          width: 400,
+          height: 300,
+          range: { xMin: -5, xMax: 5, yMin: -4, yMax: 4 },
+          grid: true,
+          showIntercepts: true,
+          functions: [
+            { id: 'f1', latex: 'x^2', color: '#2563eb', width: 2, visible: true },
+            { id: 'f2', latex: 42, color: '#2563eb' },
+          ],
+        },
+        {
+          id: 't',
+          type: 'table',
+          rows: [
+            ['x', 'y'],
+            ['1', '2'],
+          ],
+          fontSize: 16,
+          color: '#000000',
+          cellWidth: 60,
+          cellHeight: 30,
+        },
+        {
+          id: 'bad',
+          type: 'graph',
+          width: 400,
+          height: 300,
+          range: { xMin: 5, xMax: -5, yMin: 0, yMax: 1 },
+        },
+      ]),
+      report,
+    );
+    const [m, g, t] = out.pages[0]!.objects as unknown as Record<string, unknown>[];
+    expect(m).toMatchObject({ type: 'math', latex: '\\frac{1}{2}' });
+    expect((g!.functions as unknown[]).length).toBe(1);
+    expect(g).toMatchObject({ showIntercepts: true, showIntersections: false });
+    expect(t).toMatchObject({
+      rows: [
+        ['x', 'y'],
+        ['1', '2'],
+      ],
+    });
+    expect(report.skippedObjects).toBe(1);
+  });
+});
