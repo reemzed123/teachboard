@@ -1,5 +1,5 @@
 import type { BoardState, BoardStore, ViewState } from '../../features/board/boardStore';
-import type { InkLayer } from '../render/InkLayer';
+import type { ObjectLayer } from '../render/ObjectLayer';
 import type { LiveCanvas } from '../render/LiveCanvas';
 
 /** נקודת קלט אחת (עכבר, עט או מגע) בקואורדינטות מסך ולוח. */
@@ -26,7 +26,9 @@ export interface ToolContext {
   store: BoardStore;
   state(): BoardState;
   view(): ViewState;
-  ink: InkLayer;
+  objects: ObjectLayer;
+  /** סמן עכבר זמני (למשל מעל ידית); null = הסמן הרגיל של הכלי */
+  setCursor(cursor: string | null): void;
   live: LiveCanvas;
   requestOverlay(): void;
 }

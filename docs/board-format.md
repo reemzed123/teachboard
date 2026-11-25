@@ -15,8 +15,12 @@
 ### document.json
 
 - `pages[]`: `id`, `layout` (`bounded` = עמוד מחברת, `infinite` = לוח אינסופי), `size {width,height}` (יחידות לוח; ברירת מחדל A4 לרוחב 1123×794), `background {pattern, color, spacing, imageAssetId?}`, `objects[]`.
-- `objects[]` (גרסה 1: קווי כתב יד בלבד): `id`, `type: "ink"`, `transform {x,y,rotation,scale}`, `style {kind: pen|highlighter, color, width, opacity}`, `points` (שלשות x,y,לחץ ביחס ל-transform), `pressure` (האם נמדד לחץ אמיתי), `locked?`.
+- `objects[]` – שדות משותפים לכל סוג: `id`, `type`, `transform {x, y, rotation (מעלות), scale (אחיד)}`, `locked?`, `groupId?`.
+  - `type: "ink"` – כתב יד: `style {kind: pen|highlighter, color, width, opacity}`, `points` (שלשות x,y,לחץ ביחס ל-transform), `pressure`.
+  - `type: "shape"` – קו/חץ: `kind: line|arrow`, `dx, dy` (נקודת הסוף ביחס להתחלה), `style {color, width, opacity, dash: solid|dashed|dotted}`, `arrowStart?`.
+  - `type: "text"` – טקסט: `text` (עד 20,000 תווים, בלי תווי בקרה מלבד מעבר שורה), `fontSize`, `color`, `dir: rtl|ltr`, `bold?`, `width`, `height` (גודל התיבה כפי שנמדד).
 - סדר האובייקטים = סדר השכבות.
+- קבוצה = כל האובייקטים בעמוד עם אותו `groupId`.
 
 ## גרסאות ותאימות
 

@@ -1,9 +1,9 @@
 import type { Op } from '../../core/document/ops';
 import type { InkObject, ObjectId } from '../../core/document/types';
-import { eraseInkCircle, inkHitsPoint } from '../../core/ink/ink';
+import { eraseInkCircle } from '../../core/ink/ink';
+import { objectHitsPoint } from '../../core/objects/geometry';
 import { rectsIntersect } from '../../core/geometry/rect';
 import { currentPage, type ViewState } from '../../features/board/boardStore';
-import { outlinePath } from '../render/inkOutline';
 import type { InputPoint, PointerSample, ToolContext, ToolHandler } from './types';
 
 // מחק בשני מצבים:
@@ -33,10 +33,12 @@ export class EraserTool implements ToolHandler {
 
     for (const obj of currentPage(state).objects) {
       if (obj.locked) continue;
-      const bounds = this.ctx.ink.boundsOf(obj.id);
+      const bounds = this.ctx.objects.boundsOf(obj.id);
       if (!bounds || !rectsIntersect(bounds, box)) continue;
-      if (!area) {
-        if (!this.removed.has(obj.id) && inkHitsPoint(obj, p.bx, p.by, r)) this.removed.add(obj.id);
+      // קווים ישרים, חצים וטקסט נמחקים בשלמותם (גם במצב "אזור")
+      if (!area || obj.type !== 'ink') {
+        if (!this.removed.has(obj.id) && objectHitsPoint(obj, p.bx, p.by, r))
+          this.removed.add(obj.id);
         continue;
       }
       const current = this.pieces.get(obj.id) ?? [obj];
@@ -54,10 +56,10 @@ export class EraserTool implements ToolHandler {
     }
 
     if (area) {
-      this.ctx.ink.setHidden(this.pieces.keys());
+      this.ctx.objects.setHidden([...this.pieces.keys(), ...this.removed]);
       this.renderPieces();
     } else {
-      this.ctx.ink.setHidden(this.removed);
+      this.ctx.objects.setHidden(this.removed);
     }
   }
 
@@ -65,22 +67,7 @@ export class EraserTool implements ToolHandler {
     const view = this.ctx.view();
     this.ctx.live.clear();
     for (const list of this.pieces.values()) {
-      for (const o of list) {
-        const path = outlinePath(o.points, o.style.kind, o.style.width, o.pressure, true);
-        // הנקודות יחסיות למוצא האובייקט – מזיזים את התצוגה בהתאם.
-        const shifted = {
-          ...view,
-          x: view.x + o.transform.x * view.scale,
-          y: view.y + o.transform.y * view.scale,
-        };
-        this.ctx.live.fillBoardPath(
-          shifted,
-          path,
-          o.style.color,
-          o.style.opacity,
-          o.style.kind === 'highlighter',
-        );
-      }
+      for (const o of list) this.ctx.live.drawObject(view, o);
     }
   }
 
@@ -124,7 +111,7 @@ export class EraserTool implements ToolHandler {
     this.removed.clear();
     this.pieces.clear();
     if (ops.length > 0) state.commit('erase', ops);
-    this.ctx.ink.setHidden([]);
+    this.ctx.objects.setHidden([]);
     this.ctx.live.clear();
   }
 
@@ -132,7 +119,7 @@ export class EraserTool implements ToolHandler {
     this.active = false;
     this.removed.clear();
     this.pieces.clear();
-    this.ctx.ink.setHidden([]);
+    this.ctx.objects.setHidden([]);
     this.ctx.live.clear();
   }
 

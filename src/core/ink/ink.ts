@@ -1,12 +1,13 @@
 import { distSqToSegment, inflate, segmentIntersectsRect, type Rect } from '../geometry/rect';
+import { toLocal, toWorld, worldBounds } from '../geometry/transform';
 import { newId } from '../document/ids';
 import type { InkObject } from '../document/types';
 
 // פעולות חישוביות על קווי כתב יד: גבולות, פגיעה, מחיקה חלקית.
 
-/** המלבן התוחם של הקו, בקואורדינטות הלוח (כולל עובי). */
-export function inkBounds(obj: InkObject): Rect {
-  const { points, transform } = obj;
+/** המלבן התוחם של הקו בקואורדינטות מקומיות (כולל עובי). */
+export function inkLocalBounds(obj: InkObject): Rect {
+  const { points } = obj;
   let minX = Infinity,
     minY = Infinity,
     maxX = -Infinity,
@@ -19,19 +20,22 @@ export function inkBounds(obj: InkObject): Rect {
     if (x > maxX) maxX = x;
     if (y > maxY) maxY = y;
   }
-  if (minX === Infinity) return { x: transform.x, y: transform.y, width: 0, height: 0 };
-  const half = obj.style.width / 2;
+  if (minX === Infinity) return { x: 0, y: 0, width: 0, height: 0 };
   return inflate(
-    { x: minX + transform.x, y: minY + transform.y, width: maxX - minX, height: maxY - minY },
-    half,
+    { x: minX, y: minY, width: maxX - minX, height: maxY - minY },
+    obj.style.width / 2,
   );
+}
+
+/** המלבן התוחם של הקו, בקואורדינטות הלוח (כולל עובי, סיבוב וקנה מידה). */
+export function inkBounds(obj: InkObject): Rect {
+  return worldBounds(obj.transform, inkLocalBounds(obj));
 }
 
 /** האם נקודה (בקואורדינטות לוח) נוגעת בקו, בסובלנות נתונה. */
 export function inkHitsPoint(obj: InkObject, x: number, y: number, tolerance: number): boolean {
-  const px = x - obj.transform.x;
-  const py = y - obj.transform.y;
-  const reach = obj.style.width / 2 + tolerance;
+  const { x: px, y: py } = toLocal(obj.transform, x, y);
+  const reach = obj.style.width / 2 + tolerance / obj.transform.scale;
   const reachSq = reach * reach;
   const p = obj.points;
   if (p.length < 6) {
@@ -48,11 +52,18 @@ export function inkHitsPoint(obj: InkObject, x: number, y: number, tolerance: nu
 
 /** האם הקו עובר דרך המלבן (בקואורדינטות לוח). */
 export function inkIntersectsRect(obj: InkObject, rect: Rect): boolean {
-  const r = { ...rect, x: rect.x - obj.transform.x, y: rect.y - obj.transform.y };
+  // בודקים בקואורדינטות הלוח (המלבן לא מסתובב עם האובייקט)
   const p = obj.points;
-  if (p.length === 3) return segmentIntersectsRect(p[0]!, p[1]!, p[0]!, p[1]!, r);
-  for (let i = 0; i + 5 < p.length; i += 3) {
-    if (segmentIntersectsRect(p[i]!, p[i + 1]!, p[i + 3]!, p[i + 4]!, r)) return true;
+  const w = (i: number) => toWorld(obj.transform, p[i]!, p[i + 1]!);
+  if (p.length === 3) {
+    const a = w(0);
+    return segmentIntersectsRect(a.x, a.y, a.x, a.y, rect);
+  }
+  let a = w(0);
+  for (let i = 3; i + 2 < p.length; i += 3) {
+    const b = w(i);
+    if (segmentIntersectsRect(a.x, a.y, b.x, b.y, rect)) return true;
+    a = b;
   }
   return false;
 }
@@ -68,15 +79,14 @@ export function eraseInkCircle(
   cy: number,
   radius: number,
 ): InkObject[] | null {
-  const px = cx - obj.transform.x;
-  const py = cy - obj.transform.y;
-  const reach = radius + obj.style.width / 2;
+  const { x: px, y: py } = toLocal(obj.transform, cx, cy);
+  const reach = radius / obj.transform.scale + obj.style.width / 2;
   const reachSq = reach * reach;
   const p = obj.points;
 
   // נקודה נמחקת אם היא בתוך העיגול. מוסיפים נקודות ביניים בקטעים ארוכים,
   // כדי שמחיקה באמצע קטע ארוך (למשל קו ישר) תחתוך אותו.
-  const step = Math.max(1, radius / 2);
+  const step = Math.max(1, radius / obj.transform.scale / 2);
   const kept: number[][] = [];
   let current: number[] = [];
   let hit = false;

@@ -1,8 +1,10 @@
 import type { SmoothingLevel } from '../../core/ink/smoothing';
+import type { LineDash } from '../../core/document/types';
 
 // העדפות הכלים (צבע, עובי וכו') – נזכרות בין פתיחות של התוכנה.
 
-export type ToolId = 'select' | 'pen' | 'highlighter' | 'eraser' | 'hand';
+export type ToolId =
+  'select' | 'pen' | 'highlighter' | 'eraser' | 'hand' | 'text' | 'line' | 'arrow';
 export type EraserMode = 'stroke' | 'area';
 
 export interface ToolPrefs {
@@ -13,7 +15,15 @@ export interface ToolPrefs {
   usePressure: boolean;
   /** החלקת כתב יד: 0 ללא, 1 עדינה, 2 רגילה, 3 חזקה */
   smoothing: SmoothingLevel;
+  /** קו ישר וחץ (הצבע והעובי – כמו העט) */
+  shape: { dash: LineDash; arrowStart: boolean };
+  text: { fontSize: number; bold: boolean };
+  /** סרגל הצבעים האישי של המורה */
+  favorites: string[];
 }
+
+export const TEXT_SIZES = [16, 24, 32, 48, 72] as const;
+export const MAX_FAVORITES = 12;
 
 export const PEN_COLORS = [
   '#1c2430',
@@ -42,6 +52,9 @@ export function defaultToolPrefs(): ToolPrefs {
     eraser: { mode: 'stroke', size: 24 },
     usePressure: true,
     smoothing: 2,
+    shape: { dash: 'solid', arrowStart: false },
+    text: { fontSize: 32, bold: false },
+    favorites: [],
   };
 }
 
@@ -77,5 +90,24 @@ export function parseToolPrefs(raw: unknown): ToolPrefs {
     smoothing: [0, 1, 2, 3].includes((raw as Record<string, unknown>).smoothing as number)
       ? ((raw as Record<string, unknown>).smoothing as SmoothingLevel)
       : d.smoothing,
+    shape: {
+      dash: (['solid', 'dashed', 'dotted'] as const).includes(r.shape?.dash as LineDash)
+        ? (r.shape!.dash as LineDash)
+        : d.shape.dash,
+      arrowStart: r.shape?.arrowStart === true,
+    },
+    text: {
+      fontSize: clamp(r.text?.fontSize, 8, 200, d.text.fontSize),
+      bold: r.text?.bold === true,
+    },
+    favorites: Array.isArray((raw as Record<string, unknown>).favorites)
+      ? [
+          ...new Set(
+            ((raw as Record<string, unknown>).favorites as unknown[])
+              .filter((c): c is string => typeof c === 'string' && HEX.test(c))
+              .map((c) => c.toLowerCase()),
+          ),
+        ].slice(0, MAX_FAVORITES)
+      : d.favorites,
   };
 }

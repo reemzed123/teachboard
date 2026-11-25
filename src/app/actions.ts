@@ -1,5 +1,18 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  ArrowUpRight,
+  BringToFront,
+  ClipboardPaste,
+  Copy,
+  CopyPlus,
+  Group,
+  Lock,
+  LockOpen,
+  Minus,
+  Scissors,
+  SendToBack,
+  Type,
+  Ungroup,
   Expand,
   Eraser,
   Focus,
@@ -18,6 +31,7 @@ import {
 } from 'lucide-react';
 import type { MessageKey } from '../i18n/he';
 import type { ToolId } from '../features/board/toolPrefs';
+import { currentPage, type BoardState } from '../features/board/boardStore';
 import type { QuickActionId } from './actionIds';
 import type { AppRuntime } from './runtime';
 import { resolveTheme } from './theme';
@@ -52,6 +66,23 @@ function toolAction(
   };
 }
 
+/** פעולה שפועלת על הבחירה (זמינה רק כשיש בחירה) */
+function selectionAction(
+  id: QuickActionId,
+  icon: LucideIcon,
+  shortcut: string | undefined,
+  fn: (s: BoardState) => void,
+): ActionDef {
+  return {
+    id,
+    labelKey: `action.${id}` as MessageKey,
+    icon,
+    shortcut,
+    run: (rt) => fn(rt.board.getState()),
+    isEnabled: (rt) => rt.board.getState().selection.length > 0,
+  };
+}
+
 export const ACTIONS: Record<QuickActionId, ActionDef> = {
   'tool.pen': toolAction('tool.pen', 'pen', 'tool.pen', PenLine, 'P'),
   'tool.highlighter': toolAction(
@@ -64,6 +95,56 @@ export const ACTIONS: Record<QuickActionId, ActionDef> = {
   'tool.eraser': toolAction('tool.eraser', 'eraser', 'tool.eraser', Eraser, 'E'),
   'tool.select': toolAction('tool.select', 'select', 'tool.select', MousePointer2, 'V'),
   'tool.hand': toolAction('tool.hand', 'hand', 'tool.hand', Hand, 'H'),
+  'tool.text': toolAction('tool.text', 'text', 'tool.text', Type, 'T'),
+  'tool.line': toolAction('tool.line', 'line', 'tool.line', Minus, 'L'),
+  'tool.arrow': toolAction('tool.arrow', 'arrow', 'tool.arrow', ArrowUpRight, 'A'),
+  'edit.duplicate': selectionAction('edit.duplicate', CopyPlus, 'Ctrl+D', (s) =>
+    s.duplicateSelection(),
+  ),
+  'edit.copy': selectionAction('edit.copy', Copy, 'Ctrl+C', (s) => s.copySelection()),
+  'edit.cut': selectionAction('edit.cut', Scissors, 'Ctrl+X', (s) => s.cutSelection()),
+  'edit.paste': {
+    id: 'edit.paste',
+    labelKey: 'action.edit.paste',
+    icon: ClipboardPaste,
+    shortcut: 'Ctrl+V',
+    run: (rt) => rt.board.getState().paste(),
+    isEnabled: (rt) => !!rt.board.getState().clipboard?.length,
+  },
+  'edit.bringFront': selectionAction('edit.bringFront', BringToFront, 'Ctrl+Shift+]', (s) =>
+    s.reorderSelection('front'),
+  ),
+  'edit.sendBack': selectionAction('edit.sendBack', SendToBack, 'Ctrl+Shift+[', (s) =>
+    s.reorderSelection('back'),
+  ),
+  'edit.group': {
+    id: 'edit.group',
+    labelKey: 'action.edit.group',
+    icon: Group,
+    shortcut: 'Ctrl+G',
+    run: (rt) => rt.board.getState().groupSelection(),
+    isEnabled: (rt) => rt.board.getState().selection.length > 1,
+  },
+  'edit.ungroup': {
+    id: 'edit.ungroup',
+    labelKey: 'action.edit.ungroup',
+    icon: Ungroup,
+    shortcut: 'Ctrl+Shift+G',
+    run: (rt) => rt.board.getState().ungroupSelection(),
+    isEnabled: (rt) => {
+      const s = rt.board.getState();
+      const ids = new Set(s.selection);
+      return currentPage(s).objects.some((o) => ids.has(o.id) && o.groupId);
+    },
+  },
+  'edit.lock': selectionAction('edit.lock', Lock, undefined, (s) => s.lockSelection()),
+  'edit.unlockAll': {
+    id: 'edit.unlockAll',
+    labelKey: 'action.edit.unlockAll',
+    icon: LockOpen,
+    run: (rt) => rt.board.getState().unlockAll(),
+    isEnabled: (rt) => currentPage(rt.board.getState()).objects.some((o) => o.locked),
+  },
   'edit.undo': {
     id: 'edit.undo',
     labelKey: 'action.edit.undo',

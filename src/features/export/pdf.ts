@@ -1,8 +1,19 @@
-import { BlendMode, PDFDocument, rgb, StandardFonts, type PDFImage, type PDFPage } from 'pdf-lib';
+import {
+  BlendMode,
+  degrees,
+  LineCapStyle,
+  PDFDocument,
+  rgb,
+  StandardFonts,
+  type PDFImage,
+  type PDFPage,
+} from 'pdf-lib';
 import { generatePattern, LINE_WIDTH_PX, patternColors } from '../../core/background/pattern';
-import type { BoardDocument, Page } from '../../core/document/types';
+import type { BoardDocument, Page, ShapeObject, TextObject } from '../../core/document/types';
+import { arrowHeadSize, textLocalBounds } from '../../core/objects/geometry';
+import { dashPattern, drawObjectLocal } from '../../engine/render/drawObject';
 import { outlinePolygon, polygonToSvgPath } from '../../engine/render/inkOutline';
-import { exportArea } from './renderPage';
+import { canvasToBlob, exportArea } from './renderPage';
 
 // ייצוא PDF וקטורי: קווי כתב היד והרקע נשמרים כצורות (חדים בכל הגדלה ובהדפסה).
 
@@ -117,21 +128,116 @@ async function addPage(
     });
   }
 
-  // כתב היד – כצורות וקטוריות
+  // האובייקטים – לפי סדר השכבות
   for (const o of page.objects) {
-    const d = polygonToSvgPath(outlinePolygon(o.points, o.style.kind, o.style.width, o.pressure));
-    if (!d) continue;
-    const c = parseColor(o.style.color);
-    out.drawSvgPath(d, {
-      x: X(o.transform.x),
-      y: Y(o.transform.y),
-      scale: k,
-      color: c.color,
-      opacity: o.style.opacity,
+    const t = o.transform;
+    const base = {
+      x: X(t.x),
+      y: Y(t.y),
+      scale: k * t.scale,
+      rotate: degrees(-t.rotation),
       borderWidth: 0,
-      blendMode: o.style.kind === 'highlighter' ? BlendMode.Multiply : BlendMode.Normal,
-    });
+    };
+    if (o.type === 'ink') {
+      const d = polygonToSvgPath(outlinePolygon(o.points, o.style.kind, o.style.width, o.pressure));
+      if (!d) continue;
+      out.drawSvgPath(d, {
+        ...base,
+        color: parseColor(o.style.color).color,
+        opacity: o.style.opacity,
+        blendMode: o.style.kind === 'highlighter' ? BlendMode.Multiply : BlendMode.Normal,
+      });
+    } else if (o.type === 'shape') {
+      drawPdfShape(out, o, base);
+    } else {
+      await drawPdfText(pdf, out, o, X, Y, k);
+    }
   }
+}
+
+type PdfBase = {
+  x: number;
+  y: number;
+  scale: number;
+  rotate: ReturnType<typeof degrees>;
+  borderWidth: number;
+};
+
+/** קו/חץ כצורה וקטורית (קו עם סוג קו, וראשי חץ ממולאים). */
+function drawPdfShape(out: PDFPage, o: ShapeObject, base: PdfBase) {
+  const { dx, dy } = o;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  const head = o.kind === 'arrow' ? Math.min(arrowHeadSize(o.style.width), len * 0.45) : 0;
+  const startHead = o.kind === 'arrow' && o.arrowStart ? head : 0;
+  const c = parseColor(o.style.color);
+  const dash = dashPattern(o.style.dash, o.style.width);
+  out.drawSvgPath(
+    `M${ux * startHead * 0.8} ${uy * startHead * 0.8}L${dx - ux * head * 0.8} ${dy - uy * head * 0.8}`,
+    {
+      ...base,
+      borderColor: c.color,
+      borderOpacity: o.style.opacity,
+      borderWidth: o.style.width,
+      borderLineCap: LineCapStyle.Round,
+      borderDashArray: dash.length ? dash : undefined,
+    },
+  );
+  const tip = (x: number, y: number, dirX: number, dirY: number) => {
+    const bx = x - dirX * head;
+    const by = y - dirY * head;
+    const w = head * 0.55;
+    out.drawSvgPath(
+      `M${x} ${y}L${bx - dirY * w} ${by + dirX * w}L${bx + dirY * w} ${by - dirX * w}Z`,
+      {
+        ...base,
+        color: c.color,
+        opacity: o.style.opacity,
+      },
+    );
+  };
+  if (head > 0) tip(dx, dy, ux, uy);
+  if (startHead > 0) tip(0, 0, -ux, -uy);
+}
+
+/**
+ * טקסט ב-PDF: נשמר כתמונה ברזולוציה גבוהה (פי 4), כי ספריית ה-PDF לא יודעת לסדר
+ * עברית מימין לשמאל. כך הטקסט נראה בדיוק כמו על המסך.
+ */
+async function drawPdfText(
+  pdf: PDFDocument,
+  out: PDFPage,
+  o: TextObject,
+  X: (x: number) => number,
+  Y: (y: number) => number,
+  k: number,
+) {
+  const b = textLocalBounds(o);
+  const res = 4 * o.transform.scale;
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(b.width * res));
+  c.height = Math.max(1, Math.ceil(b.height * res));
+  const ctx = c.getContext('2d');
+  if (!ctx) return;
+  ctx.scale(res, res);
+  ctx.translate(-b.x, -b.y);
+  drawObjectLocal(ctx, o);
+  const img = await pdf.embedPng(new Uint8Array(await (await canvasToBlob(c)).arrayBuffer()));
+  // פינת התמונה (המקומית b.x, b.y+height) אחרי סיבוב וקנה מידה
+  const t = o.transform;
+  const rad = (t.rotation * Math.PI) / 180;
+  const lx = b.x;
+  const ly = b.y + b.height;
+  const wx = t.x + (lx * Math.cos(rad) - ly * Math.sin(rad)) * t.scale;
+  const wy = t.y + (lx * Math.sin(rad) + ly * Math.cos(rad)) * t.scale;
+  out.drawImage(img, {
+    x: X(wx),
+    y: Y(wy),
+    width: b.width * t.scale * k,
+    height: b.height * t.scale * k,
+    rotate: degrees(-t.rotation),
+  });
 }
 
 /** יוצר PDF מהעמודים שנבחרו. */

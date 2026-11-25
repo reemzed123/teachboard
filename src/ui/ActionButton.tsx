@@ -18,6 +18,8 @@ export function ActionButton({
   useBoard((s) => s.tool);
   useBoard((s) => s.history);
   useBoard((s) => s.selection);
+  useBoard((s) => s.clipboard);
+  useBoard((s) => s.doc);
   useApp((s) => s.categoryBarVisible);
   const enabled = action.isEnabled ? action.isEnabled(rt) : true;
 

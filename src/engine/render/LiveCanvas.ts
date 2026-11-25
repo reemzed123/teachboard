@@ -1,4 +1,6 @@
+import type { BoardObject } from '../../core/document/types';
 import type { ViewState } from '../../features/board/boardStore';
+import { drawObjectWorld } from './drawObject';
 
 // משטח ציור נפרד וקל לקו שנכתב ברגע זה ולתצוגות זמניות.
 // "desynchronized" מאפשר לדפדפן להציג את הציור מהר יותר (פחות השהיה בעט).
@@ -99,6 +101,13 @@ export class LiveCanvas {
     ctx.beginPath();
     ctx.arc(bx, by, br, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  /** מצייר אובייקט שלם (תצוגה מקדימה, למשל קו ישר בזמן גרירה). */
+  drawObject(view: ViewState, obj: BoardObject): void {
+    const { ctx, dpr } = this;
+    ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, dpr * view.x, dpr * view.y);
+    drawObjectWorld(ctx, obj);
   }
 
   /** מצייר צורה בקואורדינטות לוח. */

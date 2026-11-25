@@ -7,12 +7,24 @@ import {
   DEFAULT_PAGE_SIZE,
   DOCUMENT_VERSION,
   type BoardDocument,
+  type BoardObject,
   type ObjectId,
   type Page,
   type PageProps,
 } from '../../core/document/types';
 import type { SettingsStorage } from '../../platform/types';
 import { parseToolPrefs, type ToolId, type ToolPrefs } from './toolPrefs';
+import {
+  cloneObjects,
+  duplicateOps,
+  groupOps,
+  lockOps,
+  pick,
+  reorderOps,
+  ungroupOps,
+  unlockAllOps,
+  type OrderMove,
+} from '../../core/objects/edit';
 
 export interface ViewState {
   /** הזזת הלוח בפיקסלים של המסך */
@@ -55,6 +67,24 @@ export interface BoardState extends DocState {
   deletePage(pageId: string): void;
   movePage(pageId: string, index: number): void;
   setPageProps(props: Partial<PageProps>): void;
+  /** עריכת טקסט פעילה: אובייקט קיים (id) או חדש במיקום (x, y) */
+  textEdit: { id: string | null; x: number; y: number } | null;
+  startTextEdit(edit: { id: string | null; x: number; y: number }): void;
+  endTextEdit(): void;
+
+  /** לוח העתקה פנימי (גם בין עמודים) */
+  clipboard: BoardObject[] | null;
+  pasteCount: number;
+  copySelection(): void;
+  cutSelection(): void;
+  paste(): void;
+  duplicateSelection(): void;
+  reorderSelection(move: OrderMove): void;
+  groupSelection(): void;
+  ungroupSelection(): void;
+  lockSelection(): void;
+  unlockAll(): void;
+
   /** טוען שיעור (מחליף את המסמך ומאפס את ההיסטוריה) */
   loadDocument(
     doc: BoardDocument,
@@ -162,6 +192,75 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
 
       pageViews: {},
       docEpoch: 0,
+
+      textEdit: null,
+      startTextEdit(edit) {
+        set({ textEdit: edit, selection: [] });
+      },
+      endTextEdit() {
+        set({ textEdit: null });
+      },
+
+      clipboard: null,
+      pasteCount: 0,
+      copySelection() {
+        const s = get();
+        const objs = pick(currentPage(s), s.selection);
+        if (objs.length) set({ clipboard: structuredClone(objs), pasteCount: 0 });
+      },
+      cutSelection() {
+        const s = get();
+        if (s.selection.length === 0) return;
+        s.copySelection();
+        s.commit('cut', [{ type: 'remove', pageId: s.pageId, ids: s.selection }]);
+      },
+      paste() {
+        const s = get();
+        if (!s.clipboard?.length) return;
+        // באותו עמוד – כל הדבקה מוזזת עוד קצת כדי שיראו את העותק; בעמוד אחר – באותו מקום.
+        const samePage = currentPage(s).objects.some((o) =>
+          s.clipboard!.some((c) => c.id === o.id),
+        );
+        const n = s.pasteCount + 1;
+        const offset = samePage ? 24 * n : 0;
+        const copies = cloneObjects(s.clipboard, offset, offset);
+        s.commit('paste', [{ type: 'add', pageId: s.pageId, objects: copies }]);
+        set({ pasteCount: n, tool: 'select', selection: copies.map((c) => c.id) });
+      },
+      duplicateSelection() {
+        const s = get();
+        const { ops, newIds } = duplicateOps(currentPage(s), s.selection);
+        if (!ops.length) return;
+        s.commit('duplicate', ops);
+        set({ selection: newIds });
+      },
+      reorderSelection(move) {
+        const s = get();
+        const ops = reorderOps(currentPage(s), s.selection, move);
+        if (ops.length) s.commit('reorder', ops);
+      },
+      groupSelection() {
+        const s = get();
+        const ops = groupOps(currentPage(s), s.selection);
+        if (ops.length) s.commit('group', ops);
+      },
+      ungroupSelection() {
+        const s = get();
+        const ops = ungroupOps(currentPage(s), s.selection);
+        if (ops.length) s.commit('ungroup', ops);
+      },
+      lockSelection() {
+        const s = get();
+        const ops = lockOps(currentPage(s), s.selection);
+        if (!ops.length) return;
+        s.commit('lock', ops);
+        set({ selection: [] });
+      },
+      unlockAll() {
+        const s = get();
+        const ops = unlockAllOps(currentPage(s));
+        if (ops.length) s.commit('unlock', ops);
+      },
       goToPage(pageId) {
         const s = get();
         if (pageId === s.pageId || !s.doc.pages.some((p) => p.id === pageId)) return;

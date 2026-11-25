@@ -838,6 +838,98 @@ input[type='range'] {
   border-color: var(--tb-danger);
 }
 
+.tb-segmented-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tb-favorites {
+  margin-top: 10px;
+}
+
+.tb-favorites-title {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  color: var(--tb-text-muted);
+}
+
+.tb-fav {
+  position: relative;
+  display: inline-flex;
+}
+
+.tb-fav-remove {
+  position: absolute;
+  top: -5px;
+  inset-inline-end: -5px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--tb-border);
+  border-radius: 50%;
+  background: var(--tb-surface);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.tb-fav:hover .tb-fav-remove,
+.tb-fav-remove:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .tb-fav-remove {
+    opacity: 1;
+  }
+}
+
+.tb-fav-add {
+  --tb-btn: 32px;
+  border: 1px dashed var(--tb-border);
+  border-radius: 50%;
+}
+
+/* ===== תיבת טקסט ועריכת בחירה ===== */
+.tb-text-editor {
+  position: absolute;
+  z-index: 4;
+  margin: 0;
+  padding: 0 2px;
+  border: 0;
+  outline: 1.5px dashed var(--tb-accent);
+  outline-offset: 3px;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  white-space: pre;
+  caret-color: var(--tb-accent);
+}
+
+.tb-selection-bar {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  translate: 50% 0;
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: calc(var(--tb-radius) + 3px);
+  box-shadow: var(--tb-shadow);
+}
+
+[dir='rtl'] .tb-selection-bar,
+.tb-selection-bar {
+  translate: -50% 0;
+}
+
+.tb-selection-bar .tb-icon-btn {
+  --tb-btn: 36px;
+}
+
 /* ===== חלון אישור ===== */
 .tb-dialog {
   max-width: min(420px, calc(100vw - 32px));

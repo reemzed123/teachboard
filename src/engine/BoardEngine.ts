@@ -8,11 +8,13 @@ import {
 } from '../features/board/boardStore';
 import type { ToolId } from '../features/board/toolPrefs';
 import { BackgroundLayer, type ImageSource } from './render/BackgroundLayer';
-import { InkLayer } from './render/InkLayer';
+import { ObjectLayer } from './render/ObjectLayer';
 import { LiveCanvas } from './render/LiveCanvas';
 import { EraserTool } from './tools/EraserTool';
 import { InkTool } from './tools/InkTool';
 import { SelectTool } from './tools/SelectTool';
+import { ShapeTool } from './tools/ShapeTool';
+import { TextTool } from './tools/TextTool';
 import type { InputPoint, PointerSample, ToolContext, ToolHandler } from './tools/types';
 import { fitRect, screenToBoard, visibleBoardRect, zoomAt } from './viewport';
 
@@ -38,7 +40,7 @@ const LIVE_RENDER_MS = 150;
 export class BoardEngine {
   private stageEl = document.createElement('div');
   private stage: Konva.Stage;
-  private ink = new InkLayer();
+  private objects = new ObjectLayer();
   private background: BackgroundLayer;
   private live = new LiveCanvas();
   private overlay = document.createElement('canvas');
@@ -63,6 +65,8 @@ export class BoardEngine {
   /** האם התקבל pointerrawupdate בקו הנוכחי (אם לא – עובדים עם pointermove הרגיל) */
   private rawSeen = false;
   private disposers: (() => void)[] = [];
+  /** סמן זמני שהכלי ביקש (למשל מעל ידית סיבוב) */
+  private toolCursor: string | null = null;
   /** כל עוד המורה לא הזיז/הגדיל ידנית – התצוגה מתאימה את עצמה לגודל המסך */
   private autoFit = false;
 
@@ -91,26 +95,33 @@ export class BoardEngine {
       height: this.height,
     });
     this.stage.add(this.background.layer);
-    this.stage.add(this.ink.layer);
+    this.stage.add(this.objects.layer);
 
     const ctx: ToolContext = {
       store,
       state: () => store.getState(),
       view: () => this.view,
-      ink: this.ink,
+      objects: this.objects,
       live: this.live,
       requestOverlay: () => this.requestOverlay(),
+      setCursor: (cursor) => {
+        this.toolCursor = cursor;
+        this.updateCursor();
+      },
     };
     this.tools = {
       pen: new InkTool(ctx, 'pen'),
       highlighter: new InkTool(ctx, 'highlighter'),
       eraser: new EraserTool(ctx),
       select: new SelectTool(ctx),
+      line: new ShapeTool(ctx, 'line'),
+      arrow: new ShapeTool(ctx, 'arrow'),
+      text: new TextTool(ctx),
     };
 
     this.view = store.getState().view;
     this.renderedView = this.view;
-    this.ink.sync(currentPage(store.getState()).objects);
+    this.objects.sync(currentPage(store.getState()).objects);
     this.resize();
     this.restorePageView();
     this.updateCursor();
@@ -169,7 +180,7 @@ export class BoardEngine {
       this.activePointerId = null;
     }
     if (s.doc !== prev.doc || pageChanged) {
-      this.ink.sync(currentPage(s).objects);
+      this.objects.sync(currentPage(s).objects);
       this.requestOverlay();
     }
     if (pageChanged) {
@@ -184,10 +195,15 @@ export class BoardEngine {
       this.activeTool = null;
       this.activePointerId = null;
       if (prev.tool !== 'hand') this.tools[prev.tool].hover?.(null);
+      this.toolCursor = null;
       this.updateCursor();
       this.requestOverlay();
     }
     if (s.prefs !== prev.prefs) this.requestOverlay();
+    // טקסט בעריכה מוסתר מהלוח (תיבת העריכה מוצגת במקומו)
+    if (s.textEdit !== prev.textEdit) {
+      this.objects.setHidden(s.textEdit?.id ? [s.textEdit.id] : []);
+    }
     // שינוי תצוגה שהגיע מבחוץ (כפתורי זום) – מציירים מיד.
     if (s.view !== prev.view && s.view !== this.view) {
       this.autoFit = false;
@@ -431,7 +447,7 @@ export class BoardEngine {
     const r = this.renderedView;
     const k = view.scale / r.scale;
     const transform = `matrix(${k},0,0,${k},${view.x - r.x * k},${view.y - r.y * k})`;
-    for (const layer of [this.background.layer, this.ink.layer]) {
+    for (const layer of [this.background.layer, this.objects.layer]) {
       const canvas = layer.getNativeCanvasElement();
       canvas.style.transformOrigin = '0 0';
       canvas.style.transform = transform;
@@ -459,9 +475,9 @@ export class BoardEngine {
     this.background.update(page, visible, v.scale);
     this.background.layer.draw();
     this.background.layer.getNativeCanvasElement().style.transform = '';
-    this.ink.setViewRect(inflate(visible, 64 / v.scale));
-    this.ink.layer.draw();
-    this.ink.layer.getNativeCanvasElement().style.transform = '';
+    this.objects.setViewRect(inflate(visible, 64 / v.scale));
+    this.objects.layer.draw();
+    this.objects.layer.getNativeCanvasElement().style.transform = '';
     this.renderedView = v;
     this.lastRenderAt = performance.now();
     this.requestOverlay();
@@ -503,11 +519,14 @@ export class BoardEngine {
     this.host.style.cursor =
       this.spaceDown || tool === 'hand'
         ? 'grab'
-        : tool === 'eraser'
-          ? 'none'
-          : tool === 'select'
-            ? 'default'
-            : 'crosshair';
+        : (this.toolCursor ??
+          (tool === 'eraser'
+            ? 'none'
+            : tool === 'select'
+              ? 'default'
+              : tool === 'text'
+                ? 'text'
+                : 'crosshair'));
   }
 
   // ---------- פעולות חיצוניות (כפתורי זום) ----------
@@ -534,7 +553,9 @@ export class BoardEngine {
    */
   fitContent() {
     const page = currentPage(this.store.getState());
-    const parts = page.objects.map((o) => this.ink.boundsOf(o.id)).filter((r): r is Rect => !!r);
+    const parts = page.objects
+      .map((o) => this.objects.boundsOf(o.id))
+      .filter((r): r is Rect => !!r);
     if (page.layout === 'bounded') parts.push({ x: 0, y: 0, ...page.size });
     const bounds = unionRects(parts);
     // משאירים מקום לסרגלי העמודים והזום בתחתית.
@@ -565,7 +586,7 @@ export class BoardEngine {
   }
 
   get objectCount(): number {
-    return this.ink.count;
+    return this.objects.count;
   }
 
   destroy() {
@@ -573,7 +594,7 @@ export class BoardEngine {
     cancelAnimationFrame(this.overlayFrame);
     this.activeTool?.cancel();
     for (const d of this.disposers) d();
-    this.ink.destroy();
+    this.objects.destroy();
     this.stage.destroy();
     this.host.replaceChildren();
     this.host.classList.remove('tb-board-host');

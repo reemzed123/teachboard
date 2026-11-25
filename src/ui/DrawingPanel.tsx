@@ -8,6 +8,8 @@ import {
   HIGHLIGHTER_WIDTHS,
   PEN_COLORS,
   PEN_WIDTHS,
+  TEXT_SIZES,
+  MAX_FAVORITES,
   WIDTH_LIMITS,
   type EraserMode,
 } from '../features/board/toolPrefs';
@@ -16,6 +18,10 @@ import type { MessageKey } from '../i18n/he';
 import { ACTIONS, actionTooltip } from '../app/actions';
 import { SMOOTHING_LEVELS } from '../core/ink/smoothing';
 import { ConfirmDialog } from './ConfirmDialog';
+import { ActionButton } from './ActionButton';
+import { IconButton } from './IconButton';
+import { Plus, X } from 'lucide-react';
+import type { LineDash } from '../core/document/types';
 import { SidePanel } from './SidePanel';
 
 const TOOL_ACTIONS: QuickActionId[] = [
@@ -23,8 +29,13 @@ const TOOL_ACTIONS: QuickActionId[] = [
   'tool.highlighter',
   'tool.eraser',
   'tool.select',
+  'tool.text',
+  'tool.line',
+  'tool.arrow',
   'tool.hand',
 ];
+
+const LINE_DASHES: LineDash[] = ['solid', 'dashed', 'dotted'];
 
 export function DrawingPanel() {
   const rt = useRuntime();
@@ -63,14 +74,97 @@ export function DrawingPanel() {
         })}
       </div>
 
+      {(tool === 'pen' || tool === 'line' || tool === 'arrow' || tool === 'text') && (
+        <ColorPicker
+          legendKey="drawing.color"
+          colors={PEN_COLORS}
+          value={prefs.pen.color}
+          onChange={(color) => updatePrefs((p) => ({ ...p, pen: { ...p.pen, color } }))}
+        />
+      )}
+
+      {(tool === 'line' || tool === 'arrow') && (
+        <>
+          <WidthPicker
+            id={`${id}-line-w`}
+            presets={PEN_WIDTHS}
+            value={prefs.pen.width}
+            color={prefs.pen.color}
+            onChange={(width) => updatePrefs((p) => ({ ...p, pen: { ...p.pen, width } }))}
+          />
+          <fieldset className="tb-field">
+            <legend>{t('drawing.lineStyle')}</legend>
+            <div
+              className="tb-segmented tb-segmented-3"
+              role="radiogroup"
+              aria-label={t('drawing.lineStyle')}
+            >
+              {LINE_DASHES.map((dash) => (
+                <button
+                  key={dash}
+                  type="button"
+                  role="radio"
+                  aria-checked={prefs.shape.dash === dash}
+                  onClick={() => updatePrefs((p) => ({ ...p, shape: { ...p.shape, dash } }))}
+                >
+                  {t(`drawing.lineStyle.${dash}`)}
+                </button>
+              ))}
+            </div>
+            {tool === 'arrow' && (
+              <label className="tb-check">
+                <input
+                  type="checkbox"
+                  checked={prefs.shape.arrowStart}
+                  onChange={(e) =>
+                    updatePrefs((p) => ({
+                      ...p,
+                      shape: { ...p.shape, arrowStart: e.target.checked },
+                    }))
+                  }
+                />
+                {t('drawing.arrowStart')}
+              </label>
+            )}
+            <p className="tb-help">{t('drawing.lineHelp')}</p>
+          </fieldset>
+        </>
+      )}
+
+      {tool === 'text' && (
+        <fieldset className="tb-field">
+          <legend>{t('drawing.textSize')}</legend>
+          <div className="tb-width-presets">
+            {TEXT_SIZES.map((size) => (
+              <button
+                key={size}
+                type="button"
+                className="tb-width-btn"
+                aria-pressed={prefs.text.fontSize === size}
+                aria-label={t('drawing.sizeValue', { n: size })}
+                onClick={() => updatePrefs((p) => ({ ...p, text: { ...p.text, fontSize: size } }))}
+                style={{ fontSize: Math.min(24, 10 + size / 5) }}
+              >
+                א
+              </button>
+            ))}
+          </div>
+          <label className="tb-check">
+            <input
+              type="checkbox"
+              checked={prefs.text.bold}
+              onChange={(e) =>
+                updatePrefs((p) => ({ ...p, text: { ...p.text, bold: e.target.checked } }))
+              }
+            />
+            {t('drawing.textBold')}
+          </label>
+          <p className="tb-help">{t('drawing.textHelp')}</p>
+        </fieldset>
+      )}
+
       {tool === 'pen' && (
         <>
-          <ColorPicker
-            legendKey="drawing.color"
-            colors={PEN_COLORS}
-            value={prefs.pen.color}
-            onChange={(color) => updatePrefs((p) => ({ ...p, pen: { ...p.pen, color } }))}
-          />
           <WidthPicker
             id={`${id}-pen-w`}
             presets={PEN_WIDTHS}
@@ -201,6 +295,10 @@ export function DrawingPanel() {
       {tool === 'select' && (
         <div className="tb-field">
           <p className="tb-help">{t('drawing.selectHelp')}</p>
+          <p className="tb-help">{t('drawing.lockedHelp')}</p>
+          <div className="tb-button-row">
+            <ActionButton id="edit.unlockAll" tooltipSide="below" />
+          </div>
           <button
             type="button"
             className="tb-btn"
@@ -255,7 +353,9 @@ function ColorPicker({
   onChange(color: string): void;
 }) {
   const id = useId();
-  const custom = !colors.includes(value);
+  const favorites = useBoard((s) => s.prefs.favorites);
+  const updatePrefs = useBoard((s) => s.updatePrefs);
+  const custom = !colors.includes(value) && !favorites.includes(value);
   return (
     <fieldset className="tb-field">
       <legend>{t(legendKey)}</legend>
@@ -285,6 +385,43 @@ function ColorPicker({
             onChange={(e) => onChange(e.target.value)}
           />
         </label>
+      </div>
+      <div className="tb-favorites" aria-label={t('drawing.favorites')} role="group">
+        <span className="tb-favorites-title">{t('drawing.favorites')}</span>
+        <div className="tb-swatches">
+          {favorites.map((c) => (
+            <span key={c} className="tb-fav">
+              <button
+                type="button"
+                className="tb-swatch"
+                style={{ background: c }}
+                aria-pressed={value === c}
+                aria-label={t('drawing.colorValue', { color: c })}
+                onClick={() => onChange(c)}
+              />
+              <button
+                type="button"
+                className="tb-fav-remove"
+                aria-label={t('drawing.favorites.remove', { color: c })}
+                title={t('drawing.favorites.remove', { color: c })}
+                onClick={() =>
+                  updatePrefs((p) => ({ ...p, favorites: p.favorites.filter((f) => f !== c) }))
+                }
+              >
+                <X size={10} aria-hidden="true" />
+              </button>
+            </span>
+          ))}
+          {!favorites.includes(value) && favorites.length < MAX_FAVORITES && (
+            <IconButton
+              icon={Plus}
+              className="tb-fav-add"
+              label={t('drawing.favorites.add')}
+              tooltipSide="below"
+              onClick={() => updatePrefs((p) => ({ ...p, favorites: [...p.favorites, value] }))}
+            />
+          )}
+        </div>
       </div>
     </fieldset>
   );

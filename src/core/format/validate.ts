@@ -7,7 +7,11 @@ import {
   type BoardDocument,
   type BoardObject,
   type InkObject,
+  type LineDash,
   type Page,
+  type ShapeObject,
+  type TextObject,
+  type Transform,
   type PageBackground,
 } from '../document/types';
 
@@ -74,8 +78,82 @@ function cleanBackground(v: unknown): PageBackground {
   return bg;
 }
 
+function cleanTransform(v: unknown): Transform {
+  const t = isObj(v) ? v : {};
+  const C = LIMITS.coordinate;
+  return {
+    x: num(t.x, -C, C) ?? 0,
+    y: num(t.y, -C, C) ?? 0,
+    rotation: num(t.rotation, -1e4, 1e4) ?? 0,
+    scale: num(t.scale, 0.001, 1000) ?? 1,
+  };
+}
+
+const color = (v: unknown): string | null =>
+  typeof v === 'string' && HEX.test(v) ? v.toLowerCase() : null;
+
+/** שדות משותפים: נעילה וקבוצה */
+function withCommon<T extends { locked?: boolean; groupId?: string }>(obj: T, v: Obj): T {
+  if (v.locked === true) obj.locked = true;
+  if (typeof v.groupId === 'string' && ID.test(v.groupId)) obj.groupId = v.groupId;
+  return obj;
+}
+
+const DASHES: readonly LineDash[] = ['solid', 'dashed', 'dotted'];
+
+function cleanShape(v: Obj, id: string): ShapeObject | null {
+  const st = isObj(v.style) ? v.style : null;
+  if (!st) return null;
+  const C = LIMITS.coordinate;
+  const dx = num(v.dx, -C, C);
+  const dy = num(v.dy, -C, C);
+  const c = color(st.color);
+  const width = num(st.width, 0.1, 500);
+  const opacity = num(st.opacity, 0, 1);
+  if (dx === null || dy === null || !c || width === null || opacity === null) return null;
+  if (v.kind !== 'line' && v.kind !== 'arrow') return null;
+  const obj: ShapeObject = {
+    id,
+    type: 'shape',
+    kind: v.kind,
+    transform: cleanTransform(v.transform),
+    dx,
+    dy,
+    style: {
+      color: c,
+      width,
+      opacity,
+      dash: DASHES.includes(st.dash as LineDash) ? (st.dash as LineDash) : 'solid',
+    },
+  };
+  if (v.arrowStart === true) obj.arrowStart = true;
+  return withCommon(obj, v);
+}
+
+function cleanText(v: Obj, id: string): TextObject | null {
+  if (typeof v.text !== 'string' || v.text.length === 0 || v.text.length > 20000) return null;
+  const fontSize = num(v.fontSize, 4, 1000);
+  const c = color(v.color);
+  const width = num(v.width, 0, 1e6);
+  const height = num(v.height, 0, 1e6);
+  if (fontSize === null || !c || width === null || height === null) return null;
+  const obj: TextObject = {
+    id,
+    type: 'text',
+    transform: cleanTransform(v.transform),
+    // תווי בקרה (חוץ ממעבר שורה) מוסרים
+    text: [...v.text].filter((ch) => ch === '\n' || ch.charCodeAt(0) >= 32).join(''),
+    fontSize,
+    color: c,
+    dir: v.dir === 'ltr' ? 'ltr' : 'rtl',
+    width,
+    height,
+  };
+  if (v.bold === true) obj.bold = true;
+  return withCommon(obj, v);
+}
+
 function cleanInk(v: Obj, id: string): InkObject | null {
-  const t = isObj(v.transform) ? v.transform : {};
   const st = isObj(v.style) ? v.style : null;
   if (!st) return null;
   const C = LIMITS.coordinate;
@@ -89,25 +167,19 @@ function cleanInk(v: Obj, id: string): InkObject | null {
     points[i] = n;
   }
   const kind = st.kind === 'highlighter' ? 'highlighter' : st.kind === 'pen' ? 'pen' : null;
-  const color = typeof st.color === 'string' && HEX.test(st.color) ? st.color.toLowerCase() : null;
+  const inkColor = color(st.color);
   const width = num(st.width, 0.1, 500);
   const opacity = num(st.opacity, 0, 1);
-  if (!kind || !color || width === null || opacity === null) return null;
+  if (!kind || !inkColor || width === null || opacity === null) return null;
   const obj: InkObject = {
     id,
     type: 'ink',
-    transform: {
-      x: num(t.x, -C, C) ?? 0,
-      y: num(t.y, -C, C) ?? 0,
-      rotation: num(t.rotation, -1e4, 1e4) ?? 0,
-      scale: num(t.scale, 0.001, 1000) ?? 1,
-    },
-    style: { kind, color, width, opacity },
+    transform: cleanTransform(v.transform),
+    style: { kind, color: inkColor, width, opacity },
     points,
     pressure: v.pressure === true,
   };
-  if (v.locked === true) obj.locked = true;
-  return obj;
+  return withCommon(obj, v);
 }
 
 export interface ValidationReport {
@@ -140,11 +212,20 @@ export function validateDocument(raw: unknown, report?: ValidationReport): Board
     total += list.length;
     if (total > LIMITS.objectsTotal) throw new FormatError('tooLarge', 'objects');
     for (const o of list) {
-      if (!isObj(o) || o.type !== 'ink') {
+      const cleaner = !isObj(o)
+        ? null
+        : o.type === 'ink'
+          ? cleanInk
+          : o.type === 'shape'
+            ? cleanShape
+            : o.type === 'text'
+              ? cleanText
+              : null;
+      if (!cleaner || !isObj(o)) {
         skipped++;
         continue;
       }
-      const clean = cleanInk(o, cleanId(o.id, usedIds, 'o'));
+      const clean = cleaner(o, cleanId(o.id, usedIds, 'o'));
       if (clean) objects.push(clean);
       else skipped++;
     }

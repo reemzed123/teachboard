@@ -21,7 +21,7 @@ function docWith(objects: unknown[]) {
 describe('validateDocument', () => {
   it('accepts a valid document and normalizes colors', () => {
     const out = validateDocument(docWith([inkRaw('a')]));
-    expect(out.pages[0]!.objects[0]!.style.color).toBe('#aabbcc');
+    expect((out.pages[0]!.objects[0] as { style: { color: string } }).style.color).toBe('#aabbcc');
   });
 
   it('rejects things that are not documents', () => {
@@ -95,5 +95,78 @@ describe('validateDocument', () => {
     expect(p.background.spacing).toBe(80);
     expect(p.background.imageAssetId).toBeUndefined();
     expect(p.size).toEqual({ width: 1123, height: 794 });
+  });
+});
+
+describe('validate shapes and text', () => {
+  it('keeps valid lines, arrows and text with groups and locks', () => {
+    const out = validateDocument(
+      docWith([
+        {
+          id: 's1',
+          type: 'shape',
+          kind: 'arrow',
+          transform: { x: 1, y: 2, rotation: 30, scale: 2 },
+          dx: 10,
+          dy: 5,
+          style: { color: '#FF0000', width: 3, opacity: 1, dash: 'dashed' },
+          arrowStart: true,
+          groupId: 'g1',
+          locked: true,
+        },
+        {
+          id: 't1',
+          type: 'text',
+          transform: { x: 0, y: 0, rotation: 0, scale: 1 },
+          text: 'שלום\nעולם',
+          fontSize: 24,
+          color: '#000000',
+          dir: 'rtl',
+          width: 80,
+          height: 62,
+          bold: true,
+          groupId: 'g1',
+        },
+      ]),
+    );
+    const [s, t] = out.pages[0]!.objects as unknown as [
+      Record<string, unknown>,
+      Record<string, unknown>,
+    ];
+    expect(s).toMatchObject({ kind: 'arrow', arrowStart: true, groupId: 'g1', locked: true });
+    expect((s.style as { dash: string }).dash).toBe('dashed');
+    expect(t).toMatchObject({ text: 'שלום\nעולם', bold: true, dir: 'rtl' });
+  });
+
+  it('rejects bad shapes/text and strips control characters', () => {
+    const report = { skippedObjects: 0 };
+    const out = validateDocument(
+      docWith([
+        {
+          id: 'a',
+          type: 'shape',
+          kind: 'circle',
+          dx: 1,
+          dy: 1,
+          style: { color: '#000000', width: 1, opacity: 1 },
+        },
+        { id: 'b', type: 'text', text: '', fontSize: 20, color: '#000000', width: 1, height: 1 },
+        {
+          id: 'c',
+          type: 'text',
+          text: 'a\u0000b\u0007c',
+          fontSize: 20,
+          color: '#000000',
+          width: 1,
+          height: 1,
+          groupId: '../x',
+        },
+      ]),
+      report,
+    );
+    expect(report.skippedObjects).toBe(2);
+    const t = out.pages[0]!.objects[0] as { text: string; groupId?: string };
+    expect(t.text).toBe('abc');
+    expect(t.groupId).toBeUndefined();
   });
 });
