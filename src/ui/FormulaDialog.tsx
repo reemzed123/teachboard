@@ -75,7 +75,11 @@ function Dialog({ id }: { id: string | null }) {
       cancelled = true;
       const kb = (window as unknown as { mathVirtualKeyboard?: { hide(): void } })
         .mathVirtualKeyboard;
-      kb?.hide();
+      try {
+        kb?.hide();
+      } catch {
+        // אין מקלדת להסתיר
+      }
     };
   }, []);
 
@@ -86,7 +90,14 @@ function Dialog({ id }: { id: string | null }) {
     const kb = (window as unknown as { mathVirtualKeyboard?: { container: HTMLElement | null } })
       .mathVirtualKeyboard;
     // המקלדת המתמטית מוצגת בתוך החלון (אחרת היא מוסתרת מאחוריו)
-    if (kb && dialogRef.current) kb.container = dialogRef.current;
+    // (בתוך מסגרת של אתר אחר MathLive לא מרשה לשנות זאת וזורק שגיאה – אז מדלגים)
+    if (kb && dialogRef.current && window.top === window.self) {
+      try {
+        kb.container = dialogRef.current;
+      } catch {
+        // המקלדת תופיע במקומה הרגיל
+      }
+    }
     setTimeout(() => f.focus());
   }, [ready, existing]);
 
@@ -146,8 +157,12 @@ function Dialog({ id }: { id: string | null }) {
       }
     ).mathVirtualKeyboard;
     if (!kb) return;
-    if (kb.visible) kb.hide();
-    else kb.show();
+    try {
+      if (kb.visible) kb.hide();
+      else kb.show();
+    } catch {
+      // בתוך מסגרת המקלדת מנוהלת על ידי החלון החיצוני
+    }
     fieldRef.current?.focus();
   };
 

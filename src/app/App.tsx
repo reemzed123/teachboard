@@ -10,11 +10,18 @@ import { DrawingPanel } from '../ui/DrawingPanel';
 import { TemplatesPanel } from '../ui/TemplatesPanel';
 import { FilesPanel } from '../ui/FilesPanel';
 import { Toast } from '../ui/Toast';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
+import { t } from '../i18n';
 import { MathPanel } from '../ui/MathPanel';
 import { FormulaDialog } from '../ui/FormulaDialog';
 import { handleShortcut } from './shortcuts';
 import { useApp, useRuntime } from './StoreContext';
 import { applyTheme } from './theme';
+
+function panelFailed(rt: ReturnType<typeof useRuntime>) {
+  rt.app.getState().closePanel();
+  rt.app.getState().notify('error', t('error.part'));
+}
 
 export function App() {
   const rt = useRuntime();
@@ -70,16 +77,29 @@ export function App() {
       {!focusMode && <TopBar />}
       <div className="tb-main">
         {!focusMode && categoryBarVisible && <CategoryBar />}
-        {!focusMode && openPanel === 'settings' && <SettingsPanel />}
-        {!focusMode && category?.id === 'drawing' && <DrawingPanel />}
-        {!focusMode && category?.id === 'templates' && <TemplatesPanel />}
-        {!focusMode && category?.id === 'files' && <FilesPanel />}
-        {!focusMode && category?.id === 'math' && <MathPanel />}
-        {!focusMode && category && !category.available && <CategoryPanel category={category} />}
+        {!focusMode && openPanel && (
+          // חלונית שנכשלה נסגרת לבד – בלי להפיל את התוכנה
+          <ErrorBoundary key={openPanel} fallback={() => null} onError={() => panelFailed(rt)}>
+            {openPanel === 'settings' && <SettingsPanel />}
+            {category?.id === 'drawing' && <DrawingPanel />}
+            {category?.id === 'templates' && <TemplatesPanel />}
+            {category?.id === 'files' && <FilesPanel />}
+            {category?.id === 'math' && <MathPanel />}
+            {category && !category.available && <CategoryPanel category={category} />}
+          </ErrorBoundary>
+        )}
         <Workspace />
       </div>
       {focusMode && <FocusRestoreButton />}
-      <FormulaDialog />
+      <ErrorBoundary
+        fallback={() => null}
+        onError={() => {
+          rt.board.getState().closeFormula();
+          rt.app.getState().notify('error', t('error.dialog'));
+        }}
+      >
+        <FormulaDialog />
+      </ErrorBoundary>
       <Toast />
     </div>
   );

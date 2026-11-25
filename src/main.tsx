@@ -16,6 +16,7 @@ import { applyTheme } from './app/theme';
 import { setLocale } from './i18n';
 import { createWebSettingsStorage } from './platform/web/settingsStorage';
 import { UpdatePrompt } from './ui/UpdatePrompt';
+import { ErrorBoundary } from './ui/ErrorBoundary';
 import './styles/global.css';
 
 setLocale('he');
@@ -69,7 +70,22 @@ if (!root) throw new Error('Root element #root not found');
 createRoot(root).render(
   <StrictMode>
     <RuntimeContext.Provider value={runtime}>
-      <App />
+      <ErrorBoundary
+        fallback={() => (
+          <div className="tb-error-screen" role="alert">
+            <p>{t('error.app')}</p>
+            <button
+              type="button"
+              className="tb-btn tb-btn-primary"
+              onClick={() => location.reload()}
+            >
+              {t('error.reload')}
+            </button>
+          </div>
+        )}
+      >
+        <App />
+      </ErrorBoundary>
       <UpdatePrompt />
     </RuntimeContext.Provider>
   </StrictMode>,

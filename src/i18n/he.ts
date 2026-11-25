@@ -288,6 +288,11 @@ export const he = {
   'background.image.error.imageType': 'אפשר לבחור רק תמונה מסוג PNG, JPEG או WebP.',
 
   'notice.close': 'סגירת ההודעה',
+  'error.part': 'החלק הזה נתקל בבעיה ונסגר. הלוח והשיעור ממשיכים לעבוד, והשיעור שמור.',
+  'error.retry': 'ניסיון חוזר',
+  'error.app': 'משהו השתבש בתוכנה. השיעור שמור במחשב – טעינה מחדש תחזיר אותו.',
+  'error.reload': 'טעינה מחדש',
+  'error.dialog': 'החלון נתקל בבעיה ונסגר. השיעור שמור.',
 
   'update.available': 'גרסה חדשה של TeachBoard מוכנה.',
   'update.reload': 'עדכון עכשיו',

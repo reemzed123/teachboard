@@ -1101,6 +1101,19 @@ input[type='range'] {
   background: var(--tb-accent-soft);
 }
 
+.tb-error-box {
+  padding: 16px;
+}
+
+.tb-error-screen {
+  height: 100%;
+  display: grid;
+  place-content: center;
+  gap: 16px;
+  padding: 16px;
+  text-align: center;
+}
+
 /* ===== חלון אישור ===== */
 .tb-dialog {
   max-width: min(420px, calc(100vw - 32px));

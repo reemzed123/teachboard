@@ -6,6 +6,7 @@ import { t } from '../i18n';
 import { installDebugHooks } from '../app/debug';
 import { attachEngine } from '../app/runtime';
 import { PageStrip } from './PageStrip';
+import { ErrorBoundary } from './ErrorBoundary';
 import { SelectionToolbar } from './SelectionToolbar';
 import { TextEditor } from './TextEditor';
 import { ZoomControls } from './ZoomControls';
@@ -52,9 +53,15 @@ export function Workspace() {
   return (
     <main className="tb-workspace" aria-label={t('workspace.label')}>
       <div ref={hostRef} className="tb-board" data-testid="board" />
-      <TextEditor />
-      <SelectionToolbar />
-      <PageStrip />
+      <ErrorBoundary fallback={() => null}>
+        <TextEditor />
+      </ErrorBoundary>
+      <ErrorBoundary fallback={() => null}>
+        <SelectionToolbar />
+      </ErrorBoundary>
+      <ErrorBoundary fallback={() => null}>
+        <PageStrip />
+      </ErrorBoundary>
       <ZoomControls />
     </main>
   );
