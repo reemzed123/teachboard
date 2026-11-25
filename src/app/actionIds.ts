@@ -21,6 +21,7 @@ export const QUICK_ACTION_IDS = [
   'edit.group',
   'edit.ungroup',
   'edit.lock',
+  'edit.unlock',
   'edit.unlockAll',
   'view.zoomIn',
   'view.zoomOut',

@@ -187,10 +187,10 @@ test('layer order, grouping and locking from the selection toolbar', async ({ pa
   await click(page, 200, 200);
   expect(await selection(page)).toEqual([second]);
 
-  // נעילה: לא נבחר ולא נמחק
+  // נעילה: נבחר רק לתצוגה (עם "ביטול נעילה"), ולא נמחק
   await bar.locator('[data-action="edit.lock"]').click();
   await click(page, 200, 200);
-  expect(await selection(page)).toEqual([]);
+  await expect(bar.locator('[data-action="edit.unlock"]')).toBeVisible();
   await page.keyboard.press('e');
   await drag(page, 200, 190, 200, 210);
   await expect.poll(() => count(page)).toBe('2');
@@ -232,4 +232,46 @@ test('lines, arrows, text and groups are saved and come back after reload', asyn
   expect(objs.map((o) => o.type)).toEqual(['shape', 'text']);
   expect(objs[0]!.groupId).toBeTruthy();
   expect(objs[0]!.groupId).toBe(objs[1]!.groupId);
+});
+
+test('text is kept when finishing by clicking on the board or switching tool', async ({ page }) => {
+  await page.keyboard.press('t');
+  await click(page, 400, 150);
+  await page.keyboard.type('ראשון');
+  // סיום בלחיצה על הלוח (כך שהתיבה נסגרת "מבחוץ")
+  await click(page, 600, 400);
+  await expect.poll(async () => (await objects(page)).map((o) => o.text)).toEqual(['ראשון']);
+
+  await click(page, 400, 300);
+  await page.keyboard.type('שני');
+  // סיום במעבר כלי מהסרגל העליון
+  await page.locator('.tb-quick [data-action="tool.pen"]').click();
+  await expect.poll(async () => (await objects(page)).map((o) => o.text)).toEqual(['ראשון', 'שני']);
+});
+
+test('a locked object can be clicked to show "unlock", and is protected from Delete', async ({
+  page,
+}) => {
+  await page.keyboard.press('l');
+  await drag(page, 100, 200, 300, 200);
+  await page.keyboard.press('v');
+  await click(page, 200, 200);
+  const bar = page.getByRole('toolbar', { name: 'פעולות על הבחירה' });
+  await bar.locator('[data-action="edit.lock"]').click();
+  await expect(bar).toHaveCount(0);
+
+  // לחיצה על האובייקט הנעול – נבחר לתצוגה, עם לחצן ביטול נעילה בלבד
+  await click(page, 200, 200);
+  await expect(bar.locator('[data-action="edit.unlock"]')).toBeVisible();
+  await expect(bar.locator('[data-action="edit.deleteSelection"]')).toHaveCount(0);
+  // גרירה לא מזיזה, Delete לא מוחק
+  await drag(page, 200, 200, 260, 260);
+  expect((await objects(page))[0]!.transform.x).toBe(100);
+  await page.keyboard.press('Delete');
+  await expect.poll(() => count(page)).toBe('1');
+
+  await bar.locator('[data-action="edit.unlock"]').click();
+  expect((await objects(page))[0]!.locked).toBeUndefined();
+  await click(page, 200, 200);
+  await expect(bar.locator('[data-action="edit.lock"]')).toBeVisible();
 });

@@ -51,6 +51,7 @@ export const he = {
   'action.edit.group': 'קיבוץ',
   'action.edit.ungroup': 'פירוק קבוצה',
   'action.edit.lock': 'נעילה',
+  'action.edit.unlock': 'ביטול נעילה',
   'action.edit.unlockAll': 'ביטול נעילה של כל העמוד',
   'selection.toolbar': 'פעולות על הבחירה',
 

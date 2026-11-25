@@ -66,6 +66,12 @@ function toolAction(
   };
 }
 
+function selectedObjects(rt: AppRuntime) {
+  const s = rt.board.getState();
+  const ids = new Set(s.selection);
+  return currentPage(s).objects.filter((o) => ids.has(o.id));
+}
+
 /** פעולה שפועלת על הבחירה (זמינה רק כשיש בחירה) */
 function selectionAction(
   id: QuickActionId,
@@ -138,6 +144,13 @@ export const ACTIONS: Record<QuickActionId, ActionDef> = {
     },
   },
   'edit.lock': selectionAction('edit.lock', Lock, undefined, (s) => s.lockSelection()),
+  'edit.unlock': {
+    id: 'edit.unlock',
+    labelKey: 'action.edit.unlock',
+    icon: LockOpen,
+    run: (rt) => rt.board.getState().unlockSelection(),
+    isEnabled: (rt) => selectedObjects(rt).some((o) => o.locked),
+  },
   'edit.unlockAll': {
     id: 'edit.unlockAll',
     labelKey: 'action.edit.unlockAll',
@@ -166,12 +179,8 @@ export const ACTIONS: Record<QuickActionId, ActionDef> = {
     labelKey: 'action.edit.deleteSelection',
     icon: Trash2,
     shortcut: 'Delete',
-    run: (rt) => {
-      const s = rt.board.getState();
-      if (s.selection.length === 0) return;
-      s.commit('delete', [{ type: 'remove', pageId: s.pageId, ids: s.selection }]);
-    },
-    isEnabled: (rt) => rt.board.getState().selection.length > 0,
+    run: (rt) => rt.board.getState().deleteSelection(),
+    isEnabled: (rt) => selectedObjects(rt).some((o) => !o.locked),
   },
   'view.zoomIn': {
     id: 'view.zoomIn',

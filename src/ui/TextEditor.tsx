@@ -82,8 +82,13 @@ function Editor() {
     s.endTextEdit();
   };
 
-  // אם העריכה הסתיימה מבחוץ (למשל מעבר כלי) – שומרים
-  useEffect(() => () => commit(), []); // eslint-disable-line react-hooks/exhaustive-deps
+  // אם העריכה הסתיימה מבחוץ (לחיצה על הלוח, מעבר כלי) – שומרים את הטקסט העדכני.
+  // (קודם נשמרה כאן גרסה ישנה של הפונקציה, עם טקסט ריק – והטקסט "נעלם".)
+  const latestCommit = useRef(commit);
+  useLayoutEffect(() => {
+    latestCommit.current = commit;
+  });
+  useEffect(() => () => latestCommit.current(), []);
 
   const size = measureText(text || ' ', fontSize, bold);
   const px = fontSize * transform.scale * view.scale;

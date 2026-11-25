@@ -83,7 +83,10 @@ export interface BoardState extends DocState {
   groupSelection(): void;
   ungroupSelection(): void;
   lockSelection(): void;
+  unlockSelection(): void;
   unlockAll(): void;
+  /** מחיקת הבחירה (אובייקטים נעולים לא נמחקים) */
+  deleteSelection(): void;
 
   /** טוען שיעור (מחליף את המסמך ומאפס את ההיסטוריה) */
   loadDocument(
@@ -210,9 +213,13 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
       },
       cutSelection() {
         const s = get();
-        if (s.selection.length === 0) return;
+        const ids = new Set(s.selection);
+        const removable = currentPage(s)
+          .objects.filter((o) => ids.has(o.id) && !o.locked)
+          .map((o) => o.id);
+        if (removable.length === 0) return;
         s.copySelection();
-        s.commit('cut', [{ type: 'remove', pageId: s.pageId, ids: s.selection }]);
+        s.commit('cut', [{ type: 'remove', pageId: s.pageId, ids: removable }]);
       },
       paste() {
         const s = get();
@@ -255,6 +262,32 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
         if (!ops.length) return;
         s.commit('lock', ops);
         set({ selection: [] });
+      },
+      unlockSelection() {
+        const s = get();
+        const ids = new Set(s.selection);
+        const objs = currentPage(s).objects.filter((o) => ids.has(o.id) && o.locked);
+        if (!objs.length) return;
+        s.commit('unlock', [
+          {
+            type: 'replace',
+            pageId: s.pageId,
+            objects: objs.map((o) => {
+              const copy = { ...o };
+              delete copy.locked;
+              return copy;
+            }),
+          },
+        ]);
+      },
+      deleteSelection() {
+        const s = get();
+        const ids = new Set(s.selection);
+        const removable = currentPage(s)
+          .objects.filter((o) => ids.has(o.id) && !o.locked)
+          .map((o) => o.id);
+        if (removable.length)
+          s.commit('delete', [{ type: 'remove', pageId: s.pageId, ids: removable }]);
       },
       unlockAll() {
         const s = get();

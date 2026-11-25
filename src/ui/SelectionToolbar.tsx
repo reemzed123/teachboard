@@ -17,6 +17,8 @@ const ACTIONS: QuickActionId[] = [
   'edit.deleteSelection',
 ];
 
+const LOCKED_ACTIONS: QuickActionId[] = ['edit.unlock', 'edit.copy', 'edit.duplicate'];
+
 /** סרגל קטן שמופיע מעל האובייקטים שנבחרו. */
 export function SelectionToolbar() {
   const tool = useBoard((s) => s.tool);
@@ -26,7 +28,10 @@ export function SelectionToolbar() {
   if (tool !== 'select' || selection.length === 0) return null;
 
   const ids = new Set(selection);
-  const b = unionRects(objects.filter((o) => ids.has(o.id)).map(objectBounds));
+  const selected = objects.filter((o) => ids.has(o.id));
+  const b = unionRects(selected.map(objectBounds));
+  // בחירה נעולה: רק ביטול נעילה, העתקה ושכפול
+  const actions = selected.some((o) => o.locked) ? LOCKED_ACTIONS : ACTIONS;
   if (!b) return null;
   const centerX = (b.x + b.width / 2) * view.scale + view.x;
   const top = b.y * view.scale + view.y;
@@ -44,7 +49,7 @@ export function SelectionToolbar() {
       }}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      {ACTIONS.map((id) => (
+      {actions.map((id) => (
         <ActionButton key={id} id={id} tooltipSide={above ? 'above' : 'below'} />
       ))}
     </div>

@@ -48,14 +48,19 @@ export class SelectTool implements ToolHandler {
     return this.page().objects.filter((o) => ids.has(o.id));
   }
 
-  private hitTest(p: InputPoint): BoardObject | null {
+  private hitTest(p: InputPoint, locked = false): BoardObject | null {
     const objects = this.page().objects;
     const tol = 6 / this.ctx.view().scale;
     for (let i = objects.length - 1; i >= 0; i--) {
       const o = objects[i]!;
-      if (!o.locked && objectHitsPoint(o, p.bx, p.by, tol)) return o;
+      if (!!o.locked === locked && objectHitsPoint(o, p.bx, p.by, tol)) return o;
     }
     return null;
+  }
+
+  /** בחירה של אובייקטים נעולים: מוצגת (כדי שאפשר יהיה לבטל נעילה), אבל בלי הזזה ובלי ידיות. */
+  private selectionLocked(): boolean {
+    return this.selected().some((o) => o.locked);
   }
 
   private boundsOf(objs: readonly BoardObject[]): Rect | null {
@@ -120,7 +125,7 @@ export class SelectTool implements ToolHandler {
     const page = this.page();
     this.originals = this.selected();
 
-    const handle = this.originals.length ? this.handleAt(p) : null;
+    const handle = this.originals.length && !this.selectionLocked() ? this.handleAt(p) : null;
     if (handle) {
       const b = this.boundsOf(this.originals)!;
       if (handle === 'rotate') {
@@ -163,12 +168,24 @@ export class SelectTool implements ToolHandler {
       this.lastClick = { id: hit.id, at: now };
     }
 
+    // לחיצה על אובייקט נעול (כשאין מעליו אובייקט רגיל): בוחרים אותו רק לתצוגה,
+    // כדי שיופיע הלחצן "ביטול נעילה".
+    if (!hit) {
+      const lockedHit = this.hitTest(p, true);
+      if (lockedHit) {
+        state.setSelection(expandGroups(page.objects, [lockedHit.id]));
+        this.mode = { kind: 'idle' };
+        this.ctx.requestOverlay();
+        return;
+      }
+    }
+
     if (hit && !state.selection.includes(hit.id)) {
       const group = expandGroups(page.objects, [hit.id]);
       state.setSelection(s.shiftKey ? [...new Set([...state.selection, ...group])] : group);
       this.originals = this.selected();
       this.mode = { kind: 'move', start: p, dx: 0, dy: 0 };
-    } else if (hit || insideSelection) {
+    } else if ((hit || insideSelection) && !this.selectionLocked()) {
       this.mode = { kind: 'move', start: p, dx: 0, dy: 0 };
     } else {
       if (!s.shiftKey) state.setSelection([]);
@@ -249,7 +266,7 @@ export class SelectTool implements ToolHandler {
   }
 
   hover(p: InputPoint | null): void {
-    const h = p && this.mode.kind === 'idle' ? this.handleAt(p) : null;
+    const h = p && this.mode.kind === 'idle' && !this.selectionLocked() ? this.handleAt(p) : null;
     this.ctx.setCursor(
       h === 'rotate' ? 'grab' : h === 'nw' || h === 'se' ? 'nwse-resize' : h ? 'nesw-resize' : null,
     );
@@ -262,7 +279,15 @@ export class SelectTool implements ToolHandler {
         ? this.selected()
         : this.previewObjects();
     const b = this.boundsOf(objs);
-    if (b) {
+    if (b && this.selectionLocked()) {
+      // בחירה נעולה: מסגרת אפורה בלי ידיות
+      const hs = this.handles(view, b);
+      ctx.setLineDash([3, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#8a94a3';
+      ctx.strokeRect(hs.nw.x, hs.nw.y, hs.se.x - hs.nw.x, hs.se.y - hs.nw.y);
+      ctx.setLineDash([]);
+    } else if (b) {
       const hs = this.handles(view, b);
       ctx.setLineDash([6, 4]);
       ctx.lineWidth = 1.5;
