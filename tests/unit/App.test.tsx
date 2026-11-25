@@ -1,20 +1,31 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { App } from '../../src/app/App';
-import { createAppStore } from '../../src/app/store';
-import { StoreContext } from '../../src/app/StoreContext';
 
-function renderApp() {
-  const store = createAppStore({ load: () => null, save: () => true });
-  render(
-    <StoreContext.Provider value={store}>
-      <App />
-    </StoreContext.Provider>,
-  );
-  return store;
-}
+// מנוע הציור צריך Canvas אמיתי – הוא נבדק בדפדפן (Playwright). כאן מחליפים אותו בדמה.
+vi.mock('../../src/engine/BoardEngine', () => ({
+  BoardEngine: class {
+    zoomBy() {}
+    zoomTo() {}
+    fitContent() {}
+    destroy() {}
+  },
+}));
+
+import { App } from '../../src/app/App';
+import { RuntimeContext } from '../../src/app/StoreContext';
+import { createTestRuntime } from './helpers';
 
 afterEach(cleanup);
+
+function renderApp() {
+  const rt = createTestRuntime();
+  render(
+    <RuntimeContext.Provider value={rt}>
+      <App />
+    </RuntimeContext.Provider>,
+  );
+  return rt;
+}
 
 describe('App', () => {
   it('renders the top bar, categories and workspace', () => {
@@ -40,11 +51,62 @@ describe('App', () => {
     expect(screen.queryByRole('complementary', { name: 'מתמטיקה' })).toBeNull();
   });
 
+  it('drawing panel shows real tools', () => {
+    const rt = renderApp();
+    fireEvent.click(screen.getByRole('button', { name: 'ציור וכתיבה' }));
+    fireEvent.click(screen.getByRole('radio', { name: /מחק/ }));
+    expect(rt.board.getState().tool).toBe('eraser');
+    expect(screen.getByText('סוג מחיקה')).toBeTruthy();
+  });
+
+  it('keyboard shortcuts switch tools, also with a Hebrew keyboard layout', () => {
+    const rt = renderApp();
+    fireEvent.keyDown(window, { key: 'ק', code: 'KeyE' });
+    expect(rt.board.getState().tool).toBe('eraser');
+    fireEvent.keyDown(window, { key: 'ה', code: 'KeyV' });
+    expect(rt.board.getState().tool).toBe('select');
+  });
+
   it('Escape closes the panel', () => {
     renderApp();
     fireEvent.click(screen.getByRole('button', { name: 'הגדרות' }));
     expect(screen.getByRole('complementary', { name: 'הגדרות' })).toBeTruthy();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('complementary', { name: 'הגדרות' })).toBeNull();
+  });
+});
+
+describe('shortcuts and focus', () => {
+  it('Ctrl+Z works after clicking an option in the panel, but not while typing text', () => {
+    const rt = renderApp();
+    const s = rt.board.getState();
+    s.commit('draw', [
+      {
+        type: 'add',
+        pageId: s.pageId,
+        objects: [
+          {
+            id: 'a',
+            type: 'ink',
+            transform: { x: 0, y: 0, rotation: 0, scale: 1 },
+            style: { kind: 'pen', color: '#000000', width: 4, opacity: 1 },
+            points: [0, 0, 0.5],
+            pressure: false,
+          },
+        ],
+      },
+    ]);
+    const text = document.createElement('input');
+    document.body.append(text);
+    fireEvent.keyDown(text, { key: 'z', code: 'KeyZ', ctrlKey: true });
+    expect(rt.board.getState().history.past).toHaveLength(1);
+
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    document.body.append(radio);
+    fireEvent.keyDown(radio, { key: 'z', code: 'KeyZ', ctrlKey: true });
+    expect(rt.board.getState().history.past).toHaveLength(0);
+    text.remove();
+    radio.remove();
   });
 });

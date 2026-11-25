@@ -3,7 +3,9 @@ import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/heebo';
 import { App } from './app/App';
 import { createAppStore } from './app/store';
-import { StoreContext } from './app/StoreContext';
+import { RuntimeContext } from './app/StoreContext';
+import type { AppRuntime } from './app/runtime';
+import { createBoardStore } from './features/board/boardStore';
 import { applyTheme } from './app/theme';
 import { setLocale } from './i18n';
 import { createWebSettingsStorage } from './platform/web/settingsStorage';
@@ -12,18 +14,22 @@ import './styles/global.css';
 
 setLocale('he');
 
-const store = createAppStore(createWebSettingsStorage());
+const runtime: AppRuntime = {
+  app: createAppStore(createWebSettingsStorage()),
+  board: createBoardStore(createWebSettingsStorage('default', 'tools')),
+  engine: null,
+};
 // מחילים את המראה לפני הציור הראשון, כדי שלא יהיה "הבהוב" של מצב בהיר.
-applyTheme(store.getState().settings.theme);
+applyTheme(runtime.app.getState().settings.theme);
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element #root not found');
 
 createRoot(root).render(
   <StrictMode>
-    <StoreContext.Provider value={store}>
+    <RuntimeContext.Provider value={runtime}>
       <App />
       <UpdatePrompt />
-    </StoreContext.Provider>
+    </RuntimeContext.Provider>
   </StrictMode>,
 );

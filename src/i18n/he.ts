@@ -5,7 +5,6 @@ export const he = {
   'app.tagline': 'סביבת הוראה דיגיטלית למורים',
 
   'workspace.label': 'אזור העבודה',
-  'workspace.placeholder': 'כאן יופיע הלוח. מנוע הציור ייבנה בשלב 2.',
 
   'topbar.label': 'סרגל עליון',
   'quickAccess.label': 'גישה מהירה',
@@ -27,6 +26,49 @@ export const he = {
   'action.view.focusMode': 'הסתרת כל הסרגלים',
   'action.view.toggleCategoryBar': 'הצגת סרגל הקטגוריות',
   'action.settings': 'הגדרות',
+  'action.edit.undo': 'ביטול פעולה',
+  'action.edit.redo': 'ביצוע חוזר',
+  'action.edit.deleteSelection': 'מחיקת הבחירה',
+  'action.view.zoomIn': 'הגדלה',
+  'action.view.zoomOut': 'הקטנה',
+  'action.view.zoomFit': 'התאמת התוכן למסך',
+
+  'tool.pen': 'עט',
+  'tool.highlighter': 'מדגיש',
+  'tool.eraser': 'מחק',
+  'tool.select': 'בחירה',
+  'tool.hand': 'הזזת הלוח',
+
+  'history.label': 'ביטול וחזרה',
+  'zoom.label': 'זום',
+  'zoom.reset': 'זום נוכחי {percent}% – לחיצה מחזירה ל-100%',
+
+  'drawing.tools': 'כלי ציור',
+  'drawing.color': 'צבע',
+  'drawing.colorValue': 'צבע {color}',
+  'drawing.customColor': 'צבע אחר לבחירה',
+  'drawing.width': 'עובי',
+  'drawing.widthExact': 'עובי מדויק',
+  'drawing.sizeValue': 'גודל {n}',
+  'drawing.opacity': 'אטימות',
+  'drawing.usePressure': 'עובי משתנה לפי לחץ העט',
+  'drawing.pressure.noPen': 'עדיין לא זוהה עט דיגיטלי.',
+  'drawing.pressure.detected': 'זוהה עט עם לחץ.',
+  'drawing.pressure.notDetected':
+    'זוהה עט, אבל בלי מידע לחץ. בלוחות Huion יש להפעיל "Windows Ink" בתוכנת הדרייבר.',
+  'drawing.eraserMode': 'סוג מחיקה',
+  'drawing.eraserMode.stroke': 'קווים שלמים',
+  'drawing.eraserMode.area': 'אזור (חותך קווים)',
+  'drawing.eraserSize': 'גודל המחק',
+  'drawing.selectHelp':
+    'לחיצה על קו בוחרת אותו (Shift מוסיף). גרירה בשטח ריק בוחרת כמה קווים. גרירת הבחירה מזיזה אותה.',
+  'drawing.deleteSelection': 'מחיקת הבחירה ({n})',
+  'drawing.handHelp': 'גררו כדי להזיז את הלוח. אפשר גם להחזיק רווח, או לגרור בשתי אצבעות.',
+  'drawing.clearPage': 'ניקוי כל העמוד',
+  'drawing.clearPage.title': 'לנקות את כל העמוד?',
+  'drawing.clearPage.message': 'כל מה שמצויר בעמוד יימחק. אפשר לבטל את הפעולה בלחצן "ביטול פעולה".',
+  'drawing.clearPage.confirm': 'ניקוי העמוד',
+  'common.cancel': 'ביטול',
 
   'focus.restore': 'הצגת הסרגלים',
 

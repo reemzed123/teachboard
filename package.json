@@ -25,7 +25,9 @@
   },
   "dependencies": {
     "@fontsource-variable/heebo": "5.3.0",
+    "konva": "10.11.0",
     "lucide-react": "1.80.0",
+    "perfect-freehand": "1.2.3",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "workbox-window": "7.4.1",

@@ -24,7 +24,7 @@ test('works fully offline after the first visit', async ({ page, context }) => {
   await page.getByRole('button', { name: 'הגדרות' }).click();
   await expect(page.getByRole('complementary', { name: 'הגדרות' })).toBeVisible();
   const fontOk = await page.evaluate(async () => {
-    await document.fonts.ready;
+    await document.fonts.load('16px "Heebo Variable"', 'שלום');
     return document.fonts.check('16px "Heebo Variable"', 'שלום');
   });
   expect(fontOk).toBe(true);

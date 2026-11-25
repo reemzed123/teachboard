@@ -1,6 +1,7 @@
 import { Settings as SettingsIcon } from 'lucide-react';
 import { useApp } from '../app/StoreContext';
 import { t } from '../i18n';
+import { ActionButton } from './ActionButton';
 import { IconButton } from './IconButton';
 import { QuickAccessBar } from './QuickAccessBar';
 
@@ -11,6 +12,10 @@ export function TopBar() {
   return (
     <header className="tb-topbar" aria-label={t('topbar.label')}>
       <div className="tb-brand">{t('app.name')}</div>
+      <div className="tb-history" role="group" aria-label={t('history.label')}>
+        <ActionButton id="edit.undo" />
+        <ActionButton id="edit.redo" />
+      </div>
       <QuickAccessBar />
       <div className="tb-topbar-end">
         <IconButton

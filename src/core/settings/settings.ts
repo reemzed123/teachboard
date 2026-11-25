@@ -16,10 +16,11 @@ export interface Settings {
 }
 
 export const DEFAULT_QUICK_ACCESS: readonly string[] = [
-  'view.toggleTheme',
+  'tool.pen',
+  'tool.highlighter',
+  'tool.eraser',
+  'tool.select',
   'view.fullscreen',
-  'view.focusMode',
-  'view.toggleCategoryBar',
 ];
 
 export function createDefaultSettings(): Settings {

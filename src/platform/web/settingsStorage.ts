@@ -2,8 +2,11 @@ import type { SettingsStorage } from '../types';
 
 // ההגדרות נשמרות תחת "פרופיל". כרגע יש פרופיל אחד (default),
 // וכך אפשר יהיה בעתיד להוסיף פרופילים נפרדים למורים בלי לשנות את המבנה.
-export function createWebSettingsStorage(profileId = 'default'): SettingsStorage {
-  const key = `teachboard:${profileId}:settings`;
+export function createWebSettingsStorage(
+  profileId = 'default',
+  name = 'settings',
+): SettingsStorage {
+  const key = `teachboard:${profileId}:${name}`;
   return {
     load() {
       try {

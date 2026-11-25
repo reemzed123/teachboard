@@ -1,15 +1,23 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
 });
 
+/** מציב פעולה בסרגל הגישה המהירה דרך ההגדרות. */
+async function setQuickSlot(page: Page, slot: number, option: string) {
+  await page.getByRole('button', { name: 'הגדרות' }).click();
+  await page.getByLabel(`לחצן ${slot}`).selectOption({ label: option });
+  await page.getByRole('button', { name: 'סגירת החלונית' }).click();
+}
+
 test('loads in Hebrew, right-to-left, with the local font', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.locator('html')).toHaveAttribute('lang', 'he');
   await expect(page.getByText('TeachBoard').first()).toBeVisible();
+  // טוענים את הגופן העברי ומוודאים שהוא זמין (מקובץ מקומי).
   const fontReady = await page.evaluate(async () => {
-    await document.fonts.ready;
+    await document.fonts.load('16px "Heebo Variable"', 'שלום');
     return document.fonts.check('16px "Heebo Variable"', 'שלום');
   });
   expect(fontReady).toBe(true);
@@ -39,6 +47,7 @@ test('category bar is on the right side (RTL)', async ({ page }) => {
 });
 
 test('theme toggle switches and is remembered after reload', async ({ page }) => {
+  await setQuickSlot(page, 5, 'מצב בהיר / כהה');
   const html = page.locator('html');
   const before = await html.getAttribute('data-theme');
   await page.locator('[data-action="view.toggleTheme"]').click();
@@ -62,6 +71,7 @@ test('quick access buttons can be chosen in settings and are remembered', async 
 });
 
 test('hide-all-bars mode and restoring', async ({ page }) => {
+  await setQuickSlot(page, 5, 'הסתרת כל הסרגלים');
   await page.locator('[data-action="view.focusMode"]').click();
   await expect(page.getByRole('navigation', { name: 'קטגוריות כלים' })).toHaveCount(0);
   await expect(page.locator('.tb-topbar')).toHaveCount(0);
@@ -74,6 +84,7 @@ test('hide-all-bars mode and restoring', async ({ page }) => {
 });
 
 test('category bar can be hidden and shown', async ({ page }) => {
+  await setQuickSlot(page, 5, 'הצגת סרגל הקטגוריות');
   const nav = page.getByRole('navigation', { name: 'קטגוריות כלים' });
   await page.locator('[data-action="view.toggleCategoryBar"]').click();
   await expect(nav).toHaveCount(0);

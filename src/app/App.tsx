@@ -6,11 +6,13 @@ import { FocusRestoreButton } from '../ui/FocusRestoreButton';
 import { SettingsPanel } from '../ui/SettingsPanel';
 import { TopBar } from '../ui/TopBar';
 import { Workspace } from '../ui/Workspace';
-import { useApp, useAppStore } from './StoreContext';
+import { DrawingPanel } from '../ui/DrawingPanel';
+import { handleShortcut } from './shortcuts';
+import { useApp, useRuntime } from './StoreContext';
 import { applyTheme } from './theme';
 
 export function App() {
-  const store = useAppStore();
+  const rt = useRuntime();
   const theme = useApp((s) => s.settings.theme);
   const openPanel = useApp((s) => s.openPanel);
   const categoryBarVisible = useApp((s) => s.categoryBarVisible);
@@ -26,17 +28,23 @@ export function App() {
     return () => mq.removeEventListener('change', onChange);
   }, [theme]);
 
-  // Escape: יציאה ממצב הסתרת סרגלים, או סגירת החלונית הפתוחה.
+  // מקלדת: קיצורים, ו-Escape (ביטול בחירה → יציאה ממצב הסתרת סרגלים → סגירת חלונית).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      const s = store.getState();
-      if (s.focusMode) s.setFocusMode(false);
-      else if (s.openPanel) s.closePanel();
+      if (e.key === 'Escape') {
+        if (document.querySelector('dialog[open]')) return;
+        const board = rt.board.getState();
+        const s = rt.app.getState();
+        if (board.selection.length > 0) board.setSelection([]);
+        else if (s.focusMode) s.setFocusMode(false);
+        else if (s.openPanel) s.closePanel();
+        return;
+      }
+      handleShortcut(e, rt);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [store]);
+  }, [rt]);
 
   const category = CATEGORIES.find((c) => c.id === openPanel);
 
@@ -46,7 +54,8 @@ export function App() {
       <div className="tb-main">
         {!focusMode && categoryBarVisible && <CategoryBar />}
         {!focusMode && openPanel === 'settings' && <SettingsPanel />}
-        {!focusMode && category && <CategoryPanel category={category} />}
+        {!focusMode && category?.id === 'drawing' && <DrawingPanel />}
+        {!focusMode && category && !category.available && <CategoryPanel category={category} />}
         <Workspace />
       </div>
       {focusMode && <FocusRestoreButton />}
