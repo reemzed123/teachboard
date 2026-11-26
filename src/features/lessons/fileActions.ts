@@ -8,6 +8,7 @@ import {
 import { FormatError, referencedAssets } from '../../core/format/validate';
 import type { AppRuntime } from '../../app/runtime';
 import { t } from '../../i18n';
+import { APP_VERSION } from '../../platform/desktop';
 import { pickFile, saveFile } from '../../platform/web/files';
 import { createPage, currentPage } from '../board/boardStore';
 import type { BoardDocument, Page } from '../../core/document/types';
@@ -16,8 +17,6 @@ import { exportPdf } from '../export/pdf';
 import { canvasToBlob, prepareMath, renderPageToCanvas } from '../export/renderPage';
 
 // פעולות קבצים: שמירה/פתיחה של ‎.board, וייצוא תמונה ו-PDF.
-
-const APP_VERSION = '0.3.0';
 
 async function collectAssets(rt: AppRuntime): Promise<BoardAsset[]> {
   const out: BoardAsset[] = [];

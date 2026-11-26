@@ -1,7 +1,7 @@
 {
   "name": "teachboard",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.9.0",
   "description": "TeachBoard – סביבת הוראה דיגיטלית למורים",
   "license": "UNLICENSED",
   "type": "module",
@@ -22,10 +22,13 @@
     "test:e2e": "playwright test --trace off",
     "check:licenses": "node scripts/check-licenses.mjs",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm check:licenses && pnpm build && pnpm test:e2e",
-    "assets": "node scripts/copy-assets.mjs"
+    "assets": "node scripts/copy-assets.mjs",
+    "tauri": "tauri",
+    "build:windows": "tauri build"
   },
   "dependencies": {
     "@fontsource-variable/heebo": "5.3.0",
+    "@tauri-apps/api": "2.12.4",
     "dexie": "4.4.7",
     "fflate": "0.8.3",
     "jsxgraph": "1.14.3",
@@ -44,6 +47,7 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
+    "@tauri-apps/cli": "2.12.4",
     "@testing-library/react": "16.3.3",
     "@types/node": "22.20.7",
     "@types/react": "19.3.2",

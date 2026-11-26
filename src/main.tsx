@@ -19,6 +19,7 @@ import { ErrorBoundary } from './ui/ErrorBoundary';
 import { createTeachingStore } from './features/teaching/teachingStore';
 import { installPwaListeners, requestPersistence } from './platform/web/pwa';
 import { handleLaunchedFiles } from './features/lessons/launchFiles';
+import { isDesktopApp } from './platform/desktop';
 import './styles/global.css';
 
 setLocale('he');
@@ -94,7 +95,7 @@ createRoot(root).render(
       >
         <App />
       </ErrorBoundary>
-      <UpdatePrompt />
+      {!isDesktopApp() && <UpdatePrompt />}
     </RuntimeContext.Provider>
   </StrictMode>,
 );

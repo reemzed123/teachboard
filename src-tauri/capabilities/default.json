@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "הרשאות החלון הראשי: רק הפקודות של TeachBoard (בלי גישה כללית לקבצים או לרשת)",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

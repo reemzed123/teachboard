@@ -3,6 +3,7 @@ import { useStore } from 'zustand';
 import { pwa, promptInstall, requestPersistence } from '../platform/web/pwa';
 import { t } from '../i18n';
 import { useRuntime } from '../app/StoreContext';
+import { APP_VERSION, isDesktopApp } from '../platform/desktop';
 
 /** גודל קריא: מגה-בייט, או ג'יגה-בייט כשגדול */
 export function formatSize(bytes: number): string {
@@ -18,7 +19,9 @@ export function AppInstallSection() {
   return (
     <fieldset className="tb-field" data-testid="app-section">
       <legend>{t('app.section')}</legend>
-      {installed ? (
+      {isDesktopApp() ? (
+        <p className="tb-help">{t('app.desktop')}</p>
+      ) : installed ? (
         <p className="tb-help">{t('app.installed')}</p>
       ) : canInstall ? (
         <>
@@ -32,6 +35,9 @@ export function AppInstallSection() {
         <p className="tb-help">{t('app.installManual')}</p>
       )}
 
+      <p className="tb-help" data-testid="app-version">
+        {t('app.version', { v: APP_VERSION })}
+      </p>
       <p className="tb-help" data-testid="storage-status">
         {usage !== null
           ? t('app.storageUsage', {
