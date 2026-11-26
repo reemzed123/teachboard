@@ -9,6 +9,7 @@ import { PageStrip } from './PageStrip';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SelectionToolbar } from './SelectionToolbar';
 import { GeoCircleBar } from './GeoCircleBar';
+import { GeoLabelEditor } from './GeoLabelEditor';
 import { TextEditor } from './TextEditor';
 import { ZoomControls } from './ZoomControls';
 import { Spotlight } from './teaching/Spotlight';
@@ -70,6 +71,7 @@ export function Workspace() {
       <ErrorBoundary fallback={() => null}>
         <SelectionToolbar />
         <GeoCircleBar />
+        <GeoLabelEditor />
       </ErrorBoundary>
       <ErrorBoundary fallback={() => null}>
         <PageStrip />

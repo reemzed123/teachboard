@@ -2,6 +2,7 @@ import { visibleObjects } from '../../core/document/layers';
 import { newId } from '../../core/document/ids';
 import type { GeoElement, GeometryObject } from '../../core/document/types';
 import {
+  POINT_KINDS,
   emptyGeometry,
   freeAncestors,
   hitElement,
@@ -24,6 +25,7 @@ import {
 } from '../../core/geometry/tools';
 import { currentPage, type ViewState } from '../../features/board/boardStore';
 import { geometrySelection } from '../render/drawObject';
+import { angleRadius, duplicateAngles, labelAt } from '../render/drawGeometry';
 import { getSolution } from '../render/geoCache';
 import { boardToScreen } from '../viewport';
 import type { InputPoint, PointerSample, ToolContext, ToolHandler } from './types';
@@ -39,6 +41,16 @@ const SLOT_HIT: Record<Slot, HitType[]> = {
   G: ['polygon'],
 };
 
+/** גרירת תווית או גודל קשת של זווית */
+type StyleDrag = {
+  kind: 'label' | 'arc';
+  id: string;
+  start: { x: number; y: number };
+  orig: { dx: number; dy: number };
+  moved: boolean;
+  current: GeometryObject;
+};
+
 type Drag = {
   /** הנקודות החופשיות שזזות, ומיקומן ההתחלתי */
   ids: { id: string; x: number; y: number }[];
@@ -52,6 +64,8 @@ export class GeometryTool implements ToolHandler {
   private picked: string[] = [];
   private hoverLocal: { x: number; y: number } | null = null;
   private drag: Drag | null = null;
+  private styleDrag: StyleDrag | null = null;
+  private lastLabel: { id: string; kind: string; t: number } | null = null;
   /** הכלי שהקלטים שנאספו שייכים אליו (החלפת כלי מתחילה מחדש) */
   private pickedFor: string | null = null;
 
@@ -114,6 +128,7 @@ export class GeometryTool implements ToolHandler {
     // ---- הזזה / בחירה ----
     if (tool === 'move' || tool === 'delete') {
       if (!o || !sol) return;
+      if (tool === 'move' && this.labelOrArcDown(o, sol, p, s.point.t)) return;
       const hit = hitElement(els, sol, p.x, p.y, this.tol(), 'any');
       if (tool === 'delete') {
         if (hit) this.commit('geoDelete', { ...o, elements: removeElements(els, [hit.id]) }, false);
@@ -123,6 +138,21 @@ export class GeometryTool implements ToolHandler {
       this.ctx.state().setGeoSelection(hit ? { objectId: o.id, ids: [hit.id] } : null);
       this.setHighlight(o, hit ? [hit.id] : []);
       if (!hit) return;
+      // לחיצה כפולה על קטע/זווית/קשת/נקודה – עריכת הביטוי/השם במקום
+      const t = s.point.t;
+      const editable =
+        ['segment', 'angle', 'arc', 'measure'].includes(hit.kind) || isPointKind(hit.kind);
+      if (editable && this.lastLabel?.id === `el:${hit.id}` && t - this.lastLabel.t < 450) {
+        this.lastLabel = null;
+        this.ctx.state().setGeoLabelEdit({
+          objectId: o.id,
+          elementId: hit.id,
+          kind: isPointKind(hit.kind) ? 'letter' : 'value',
+          at: { x: p.x, y: p.y - 18 },
+        });
+        return;
+      }
+      this.lastLabel = { id: `el:${hit.id}`, kind: 'el', t };
       // נקודה חופשית/גולשת – גוררים אותה; קטע/מצולע – גוררים את כל הנקודות החופשיות שלו
       const ids = isDraggable(hit) ? [hit.id] : freeAncestors(els, hit.id);
       const pos = ids
@@ -233,6 +263,72 @@ export class GeometryTool implements ToolHandler {
     this.ctx.requestOverlay();
   }
 
+  /**
+   * לחיצה על תווית (שם נקודה, ערך, ביטוי) או על הקשת של זווית:
+   * גרירה מזיזה את התווית / משנה את גודל הקשת; לחיצה כפולה על תווית – עריכה במקום.
+   */
+  private labelOrArcDown(o: GeometryObject, sol: Solution, p: { x: number; y: number }, t: number) {
+    const st = this.ctx.state();
+    const lb = labelAt(o.id, p.x, p.y);
+    if (lb) {
+      const el = o.elements.find((e) => e.id === lb.id);
+      if (!el) return false;
+      const twice =
+        this.lastLabel?.id === lb.id &&
+        this.lastLabel.kind === lb.kind &&
+        t - this.lastLabel.t < 450;
+      this.lastLabel = twice ? null : { id: lb.id, kind: lb.kind, t };
+      st.setGeoSelection({ objectId: o.id, ids: [lb.id] });
+      this.setHighlight(o, [lb.id]);
+      if (twice) {
+        st.setGeoLabelEdit({ objectId: o.id, elementId: lb.id, kind: lb.kind });
+        return true;
+      }
+      const off = el.style.labelOffset ?? { dx: 0, dy: 0 };
+      this.styleDrag = { kind: 'label', id: lb.id, start: p, orig: off, moved: false, current: o };
+      return true;
+    }
+    // קשת של זווית
+    const skip = duplicateAngles(o.elements);
+    const tol = this.tol();
+    for (const e of o.elements) {
+      const s = sol.get(e.id);
+      if (e.kind !== 'angle' || e.style.hidden || skip.has(e.id) || s?.t !== 'ang') continue;
+      const d = Math.hypot(p.x - s.vx, p.y - s.vy);
+      if (Math.abs(d - angleRadius(e)) > tol * 0.8) continue;
+      let rel = Math.atan2(p.y - s.vy, p.x - s.vx) - s.a0;
+      while (rel > Math.PI) rel -= 2 * Math.PI;
+      while (rel <= -Math.PI) rel += 2 * Math.PI;
+      const inside =
+        s.sweep >= 0 ? rel >= -0.1 && rel <= s.sweep + 0.1 : rel <= 0.1 && rel >= s.sweep - 0.1;
+      if (!inside) continue;
+      st.setGeoSelection({ objectId: o.id, ids: [e.id] });
+      this.setHighlight(o, [e.id]);
+      // לחיצה כפולה על הקשת – עריכת הביטוי של הזווית
+      if (this.lastLabel?.id === `arc:${e.id}` && t - this.lastLabel.t < 450) {
+        this.lastLabel = null;
+        st.setGeoLabelEdit({
+          objectId: o.id,
+          elementId: e.id,
+          kind: 'value',
+          at: { x: p.x, y: p.y - 18 },
+        });
+        return true;
+      }
+      this.lastLabel = { id: `arc:${e.id}`, kind: 'arc', t };
+      this.styleDrag = {
+        kind: 'arc',
+        id: e.id,
+        start: { x: s.vx, y: s.vy },
+        orig: { dx: 0, dy: 0 },
+        moved: false,
+        current: o,
+      };
+      return true;
+    }
+    return false;
+  }
+
   /** האם הקלטים שנבחרו מתאימים לאפשרות (למשל [S] מול [P,P]) */
   private matches(opt: Slot[], elements: readonly GeoElement[]): boolean {
     const o = this.construction();
@@ -261,6 +357,30 @@ export class GeometryTool implements ToolHandler {
   move(s: PointerSample): void {
     const o = this.construction();
     this.hoverLocal = this.local(o, s.point);
+    const sd = this.styleDrag;
+    if (sd && o) {
+      const p = this.hoverLocal;
+      const elements = o.elements.map((e) => {
+        if (e.id !== sd.id) return e;
+        if (sd.kind === 'arc') {
+          const r = Math.round(
+            Math.min(300, Math.max(8, Math.hypot(p.x - sd.start.x, p.y - sd.start.y))),
+          );
+          return { ...e, style: { ...e.style, arcRadius: r } };
+        }
+        const dx = Math.round(sd.orig.dx + p.x - sd.start.x);
+        const dy = Math.round(sd.orig.dy + p.y - sd.start.y);
+        return { ...e, style: { ...e.style, labelOffset: { dx, dy } } };
+      });
+      sd.moved =
+        sd.moved ||
+        (sd.kind === 'arc'
+          ? true
+          : Math.hypot(p.x - sd.start.x, p.y - sd.start.y) * this.ctx.view().scale > 3);
+      sd.current = { ...o, elements };
+      if (sd.moved) this.ctx.objects.previewTransforms([sd.current]);
+      return;
+    }
     if (this.drag && o) {
       const p = this.hoverLocal;
       const dx = p.x - this.drag.start.x;
@@ -279,6 +399,12 @@ export class GeometryTool implements ToolHandler {
   }
 
   up(): void {
+    const sd = this.styleDrag;
+    this.styleDrag = null;
+    if (sd) {
+      if (sd.moved) this.commit(sd.kind === 'arc' ? 'geoArc' : 'geoLabel', sd.current, false);
+      return;
+    }
     const d = this.drag;
     this.drag = null;
     if (!d?.moved) return;
@@ -297,6 +423,11 @@ export class GeometryTool implements ToolHandler {
   }
 
   cancel(): void {
+    if (this.styleDrag) {
+      const o = this.construction();
+      if (o) this.ctx.objects.resetPreview([o.id]);
+      this.styleDrag = null;
+    }
     if (this.drag) {
       const o = this.construction();
       if (o) this.ctx.objects.resetPreview([o.id]);
@@ -370,4 +501,8 @@ function inputsCircle(
     }
   }
   return null;
+}
+
+function isPointKind(kind: GeoElement['kind']): boolean {
+  return POINT_KINDS.has(kind);
 }

@@ -9,7 +9,6 @@ import { SidePanel } from './SidePanel';
 import { GeoToolIcon } from './GeoToolIcon';
 import { GeoShapeOptions } from './GeoShapeOptions';
 import { GeoPolygonDecorations } from './GeoPolygonDecorations';
-import { GeoPolygonLabels } from './GeoPolygonLabels';
 import { MAX_POLYGON_SIDES } from '../features/board/toolPrefs';
 
 const GROUPS: { key: MessageKey; tools: GeoToolId[] }[] = [
@@ -133,6 +132,7 @@ export function GeometryPanel() {
       </fieldset>
 
       <p className="tb-help">{t('geo.circleHelp')}</p>
+      <p className="tb-help">{t('geo.labelTip')}</p>
       <ElementInspector />
     </SidePanel>
   );
@@ -204,6 +204,16 @@ function ElementInspector() {
             }
             onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           />
+        </label>
+      )}
+      {isPoint && (
+        <label className="tb-check">
+          <input
+            type="checkbox"
+            checked={!el.style.hideDot}
+            onChange={(e) => update({ hideDot: e.target.checked ? undefined : true })}
+          />
+          {t('geo.showDot')}
         </label>
       )}
       {(isPoint || el.kind === 'angle') && (
@@ -334,7 +344,6 @@ function ElementInspector() {
         </>
       )}
       {el.kind === 'polygon' && <GeoPolygonDecorations obj={obj} poly={el} />}
-      {el.kind === 'polygon' && <GeoPolygonLabels obj={obj} poly={el} />}
       {fillable && (
         <label className="tb-check">
           <input

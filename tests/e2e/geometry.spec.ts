@@ -310,31 +310,72 @@ test('circle popup bar: central and inscribed angles, tangent; algebraic label f
   expect(text).toBe('x+3');
 });
 
-test('algebraic expressions for sides and angles from the polygon; angle arc is clickable', async ({
-  page,
-}) => {
-  await triangle(page); // A(150,450) B(450,450) C(250,200)
-  await tool(page, 'move');
-  await click(page, 280, 380);
-  const labels = page.getByTestId('geo-labels');
-  await labels.locator('[data-label-row="s0"]').fill('2x');
-  await labels.locator('[data-label-row="s0"]').press('Enter');
-  await labels.locator('[data-label-row="a0"]').fill('x+3');
-  await labels.locator('[data-label-row="a0"]').press('Enter');
-  const texts = await page.evaluate(() => {
+const geoEls = (page: Page) =>
+  page.evaluate(() => {
     const st = (window as any).__tb.runtime.board.getState();
     const g = st.doc.pages
       .find((p: any) => p.id === st.pageId)
       .objects.find((o: any) => o.type === 'geometry');
-    return g.elements.filter((e: any) => e.style.text).map((e: any) => [e.kind, e.style.text]);
+    return g.elements;
   });
-  expect(texts).toEqual([
-    ['segment', '2x'],
-    ['angle', 'x+3'],
-  ]);
-  // לחיצה על קשת הזווית ב-A בוחרת את הזווית
-  await click(page, 150, 200); // ריק – מבטל בחירה
-  await click(page, 175, 440);
-  await expect(page.getByTestId('geo-inspector')).toContainText('זווית');
-  await expect(page.getByTestId('geo-text')).toHaveValue('x+3');
+
+async function dbl(page: Page, x: number, y: number) {
+  const box = (await page.getByTestId('board').boundingBox())!;
+  await page.mouse.click(box.x + x, box.y + y);
+  await page.mouse.click(box.x + x, box.y + y);
+  await page.waitForTimeout(80);
+}
+
+test('labels on the board: edit by double-click, expression replaces the value, drag labels and arcs, hide dots/letters', async ({
+  page,
+}) => {
+  await triangle(page); // A(150,450) B(450,450) C(250,200)
+  await tool(page, 'move');
+  await click(page, 280, 380); // בתוך המשולש
+  const deco = page.getByTestId('geo-decorations');
+  await deco.locator('[data-deco="sides"]').check();
+  await deco.locator('[data-deco="angles"]').check();
+
+  // לחיצה כפולה על הצלע AB – עריכה במקום
+  await dbl(page, 300, 450);
+  const editor = page.getByTestId('geo-label-editor');
+  await expect(editor).toBeVisible();
+  await editor.fill('2x');
+  await editor.press('Enter');
+  await expect(editor).toHaveCount(0);
+  let els = await geoEls(page);
+  const ab = els.find((e: any) => e.kind === 'segment' && e.style.text === '2x');
+  expect(ab).toBeTruthy();
+
+  // לחיצה כפולה על הקשת של הזווית ב-A
+  await dbl(page, 171.5, 435.5);
+  await expect(editor).toBeVisible();
+  await editor.fill('x+3');
+  await editor.press('Enter');
+  els = await geoEls(page);
+  expect(els.filter((e: any) => e.kind === 'angle' && e.style.text === 'x+3')).toHaveLength(1);
+
+  // גרירת הביטוי של הצלע למעלה
+  await drag(page, 300, 434, 300, 404);
+  els = await geoEls(page);
+  const moved = els.find((e: any) => e.id === ab.id);
+  expect(moved.style.labelOffset.dy).toBeLessThan(-20);
+
+  // גרירת הקשת של הזווית ב-A החוצה – הקשת גדלה
+  await drag(page, 171.5, 435.5, 194, 421);
+  els = await geoEls(page);
+  const angleA = els.find((e: any) => e.kind === 'angle' && e.style.text === 'x+3');
+  expect(angleA.style.arcRadius).toBeGreaterThan(40);
+
+  // הסתרת נקודות הקודקודים בלי האותיות
+  await click(page, 280, 380);
+  await deco.locator('[data-deco="dots"]').uncheck();
+  els = await geoEls(page);
+  const verts = els.filter((e: any) => e.kind === 'point');
+  expect(verts.every((v: any) => v.style.hideDot && v.style.showLabel !== false)).toBe(true);
+  await deco.locator('[data-deco="letters"]').uncheck();
+  els = await geoEls(page);
+  expect(
+    els.filter((e: any) => e.kind === 'point').every((v: any) => v.style.showLabel === false),
+  ).toBe(true);
 });

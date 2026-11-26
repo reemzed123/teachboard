@@ -91,6 +91,15 @@ export interface BoardState extends DocState {
   /** קלט ראשון שכבר נבחר לכלי הגיאומטריה (למשל מעגל מהסרגל הקופץ) */
   geoPrefill: string | null;
   setGeoPrefill(id: string | null): void;
+  /** עריכת תווית ישירות על הלוח (לחיצה כפולה): שם נקודה, או ביטוי לקטע/זווית/קשת */
+  geoLabelEdit: {
+    objectId: string;
+    elementId: string;
+    kind: 'letter' | 'value';
+    /** מיקום (קואורדינטות מקומיות) כשאין עדיין תווית מצוירת */
+    at?: { x: number; y: number };
+  } | null;
+  setGeoLabelEdit(edit: BoardState['geoLabelEdit']): void;
 
   /** עורך הנוסחאות: נוסחה קיימת (id) או חדשה (null) */
   formulaEdit: { id: string | null } | null;
@@ -364,6 +373,10 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
         set({ textEdit: null });
       },
 
+      geoLabelEdit: null,
+      setGeoLabelEdit(edit) {
+        set({ geoLabelEdit: edit });
+      },
       geoPrefill: null,
       setGeoPrefill(id) {
         set({ geoPrefill: id });

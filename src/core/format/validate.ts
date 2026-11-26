@@ -404,6 +404,14 @@ function cleanGeometry(v: Obj, id: string): GeometryObject | null {
     if (st.showValue === true) style.showValue = true;
     const tag = typeof st.tag === 'string' ? cleanString(st.tag, 120) : null;
     if (tag) style.tag = tag;
+    if (isObj(st.labelOffset)) {
+      const dx = num(st.labelOffset.dx, -2000, 2000);
+      const dy = num(st.labelOffset.dy, -2000, 2000);
+      if (dx !== null && dy !== null) style.labelOffset = { dx, dy };
+    }
+    const ar = num(st.arcRadius, 8, 300);
+    if (ar !== null) style.arcRadius = ar;
+    if (st.hideDot === true) style.hideDot = true;
     seen.add(raw.id);
     elements.push({
       id: raw.id,

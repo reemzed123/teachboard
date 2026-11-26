@@ -121,6 +121,71 @@ export function arcDegrees(s: Extract<Solved, { t: 'arc' }>): number {
   return (sweep * 180) / Math.PI;
 }
 
+/** מלבן של תווית (קואורדינטות מקומיות) – לגרירה ולעריכה */
+export interface LabelBox {
+  id: string;
+  kind: 'letter' | 'value';
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** התוויות שצוירו בכל בנייה (מתעדכן בכל ציור) */
+export const geoLabelBoxes = new Map<string, LabelBox[]>();
+
+export function labelAt(objectId: string, x: number, y: number): LabelBox | null {
+  const boxes = geoLabelBoxes.get(objectId) ?? [];
+  // האחרונה שצוירה – למעלה
+  for (let i = boxes.length - 1; i >= 0; i--) {
+    const b = boxes[i]!;
+    if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return b;
+  }
+  return null;
+}
+
+export const DEFAULT_ARC_RADIUS = 26;
+
+export function angleRadius(e: GeoElement): number {
+  return e.style.arcRadius ?? DEFAULT_ARC_RADIUS;
+}
+
+function segmentLabelCenter(s: Extract<Solved, { t: 'ln' }>) {
+  const len = Math.hypot(s.x2 - s.x1, s.y2 - s.y1) || 1;
+  // בצד "החיצוני" לפי כיוון הקטע
+  const nx = (s.y2 - s.y1) / len;
+  const ny = -(s.x2 - s.x1) / len;
+  return { x: (s.x1 + s.x2) / 2 + nx * 16, y: (s.y1 + s.y2) / 2 + ny * 16 };
+}
+
+function angleLabelCenter(e: GeoElement, s: Extract<Solved, { t: 'ang' }>) {
+  const mid = s.a0 + s.sweep / 2;
+  const r = angleRadius(e) + 20;
+  return { x: s.vx + Math.cos(mid) * r, y: s.vy + Math.sin(mid) * r };
+}
+
+function letterCenter(s: { x: number; y: number }) {
+  return { x: s.x + 12, y: s.y - 12 };
+}
+
+/** זוויות כפולות (אותו קודקוד ואותן זרועות) – מציגים רק אחת, עדיפות לזווית עם ביטוי */
+export function duplicateAngles(elements: readonly GeoElement[]): Set<string> {
+  const best = new Map<string, GeoElement>();
+  for (const e of elements) {
+    if (e.kind !== 'angle' || e.style.hidden || e.parents.length !== 3) continue;
+    const [a, v, c] = e.parents as [string, string, string];
+    const key = `${v}|${[a, c].sort().join('|')}`;
+    const prev = best.get(key);
+    if (!prev || (!prev.style.text && e.style.text)) best.set(key, e);
+  }
+  const keep = new Set([...best.values()].map((e) => e.id));
+  return new Set(
+    elements
+      .filter((e) => e.kind === 'angle' && !keep.has(e.id) && !e.style.hidden)
+      .map((e) => e.id),
+  );
+}
+
 /** ציור הבנייה. selected = אלמנטים מודגשים (בעריכה). */
 export function drawGeometry(
   ctx: CanvasRenderingContext2D,
@@ -130,6 +195,25 @@ export function drawGeometry(
   const sol = getSolution(o);
   if (!sol) return;
   const byId = new Map(o.elements.map((e) => [e.id, e]));
+  const boxes: LabelBox[] = [];
+  geoLabelBoxes.set(o.id, boxes);
+  /** תווית במרכז (cx, cy) + ההזזה של המשתמש; נרשמת לגרירה ולעריכה בלחיצה כפולה */
+  const place = (
+    e: GeoElement,
+    kind: LabelBox['kind'],
+    text: string,
+    cx: number,
+    cy: number,
+    color: string,
+    size: number,
+  ) => {
+    ctx.font = `600 ${size}px ${FONT}`;
+    const w = ctx.measureText(text).width;
+    const x = cx + (e.style.labelOffset?.dx ?? 0);
+    const y = cy + (e.style.labelOffset?.dy ?? 0);
+    label(ctx, text, x - w / 2, y + size / 2, color, size);
+    boxes.push({ id: e.id, kind, x: x - w / 2 - 3, y: y - size / 2 - 3, w: w + 6, h: size + 6 });
+  };
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
@@ -203,41 +287,48 @@ export function drawGeometry(
     if (s.t === 'ln' && s.mode !== 'segment' && e.style.arrows) {
       drawParallelArrows(ctx, s.x1, s.y1, s.x2, s.y2, e.style.arrows);
     }
-    // ביטוי/שם לקטע (למשל 2x), ליד אמצע הקטע
+    // ערך/ביטוי לקטע – תווית אחת ליד אמצע הקטע
     if (s.t === 'ln' && s.mode === 'segment' && e.style.text) {
-      const len = Math.hypot(s.x2 - s.x1, s.y2 - s.y1) || 1;
-      const nx = (s.y2 - s.y1) / len;
-      const ny = -(s.x2 - s.x1) / len;
-      const text = valueText(e, formatNumber(len / UNITS_PER_CM, 2));
-      ctx.font = `600 14px ${FONT}`;
-      const w = ctx.measureText(text).width;
-      const mx = (s.x1 + s.x2) / 2 + nx * 16;
-      const my = (s.y1 + s.y2) / 2 + ny * 16;
-      label(ctx, text, mx - w / 2, my + 7, e.style.color, 14);
+      const len = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+      const c = segmentLabelCenter(s);
+      place(
+        e,
+        'value',
+        valueText(e, formatNumber(len / UNITS_PER_CM, 2)),
+        c.x,
+        c.y,
+        e.style.color,
+        14,
+      );
     }
     // מעלות הקשת
-    if (s.t === 'arc' && e.style.showLabel === true) {
+    if (s.t === 'arc' && (e.style.showLabel === true || e.style.text)) {
       const mid = s.a0 + (arcDegrees(s) * Math.PI) / 360;
       const text = valueText(e, `${formatNumber(arcDegrees(s), 1)}°`);
-      ctx.font = `600 13px ${FONT}`;
-      const w = ctx.measureText(text).width;
-      const tx = s.cx + Math.cos(mid) * (s.r + 16);
-      const ty = s.cy + Math.sin(mid) * (s.r + 16);
-      label(ctx, text, tx - w / 2, ty + 7, e.style.color, 13);
+      place(
+        e,
+        'value',
+        text,
+        s.cx + Math.cos(mid) * (s.r + 16),
+        s.cy + Math.sin(mid) * (s.r + 16),
+        e.style.color,
+        13,
+      );
     }
   });
 
-  // 3. זוויות: קשת (או ריבוע לזווית ישרה) ומספר מעלות
+  // 3. זוויות: קשת (או ריבוע לזווית ישרה) ומספר מעלות. זווית כפולה (אותו קודקוד וזרועות) – פעם אחת.
+  const skipAngles = duplicateAngles(o.elements);
   pass((e, s) => {
-    if (s.t !== 'ang') return;
+    if (s.t !== 'ang' || skipAngles.has(e.id)) return;
     ctx.strokeStyle = e.style.color;
     ctx.lineWidth = 1.6;
     const right = Math.abs(s.deg - 90) < 0.05;
-    const r = 26;
+    const r = angleRadius(e);
     if (right) {
       const a = s.a0;
       const b = s.a0 + s.sweep;
-      const k = 14;
+      const k = r * 0.55;
       ctx.beginPath();
       ctx.moveTo(s.vx + Math.cos(a) * k, s.vy + Math.sin(a) * k);
       ctx.lineTo(s.vx + (Math.cos(a) + Math.cos(b)) * k, s.vy + (Math.sin(a) + Math.sin(b)) * k);
@@ -252,30 +343,33 @@ export function drawGeometry(
       }
     }
     highlight(e);
-    const mid = s.a0 + s.sweep / 2;
-    const tx = s.vx + Math.cos(mid) * (r + 20);
-    const ty = s.vy + Math.sin(mid) * (r + 20);
     if (e.style.showLabel !== false || e.style.text) {
-      ctx.font = `600 13px ${FONT}`;
       const deg = `${formatNumber(s.deg, 1)}°`;
       const text =
         e.style.showLabel === false && !e.style.showValue
           ? (e.style.text ?? deg)
           : valueText(e, deg);
-      const w = ctx.measureText(text).width;
-      label(ctx, text, tx - w / 2, ty + 7, e.style.color, 13);
+      const c = angleLabelCenter(e, s);
+      place(e, 'value', text, c.x, c.y, e.style.color, 13);
     }
   });
 
-  // 4. מדידות
+  // 4. מדידות. אורך קטע שיש לו ביטוי – הביטוי מחליף את המספר (לא שתי תוויות).
   pass((e, s) => {
     if (s.t !== 'meas') return;
     const parent = byId.get(e.parents[0] ?? '');
-    const text = measureText(
-      { ...e, style: { ...e.style, label: parent?.style.label ?? e.style.label } },
-      s,
+    const parentSol = parent ? sol.get(parent.id) : undefined;
+    const onSegment = parent?.kind === 'segment' && parentSol?.t === 'ln' && s.what === 'length';
+    if (onSegment && parent.style.text) return;
+    const text = valueText(
+      e,
+      measureText({ ...e, style: { ...e.style, label: parent?.style.label ?? e.style.label } }, s),
     );
-    label(ctx, text, s.x + 6, s.y - 6, e.style.color, 14);
+    const c =
+      onSegment && parentSol?.t === 'ln'
+        ? segmentLabelCenter(parentSol)
+        : { x: s.x + 6 + text.length * 3.8, y: s.y - 14 };
+    place(e, 'value', text, c.x, c.y, e.style.color, 14);
   });
 
   // 5. נקודות ושמות (תמיד למעלה)
@@ -284,13 +378,17 @@ export function drawGeometry(
     const free = e.kind === 'point' || e.kind === 'glider';
     ctx.beginPath();
     ctx.arc(s.x, s.y, free ? 4.5 : 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = free ? e.style.color : '#ffffff';
-    ctx.fill();
-    ctx.lineWidth = 1.6;
-    ctx.strokeStyle = e.style.color;
-    ctx.stroke();
+    if (!e.style.hideDot) {
+      ctx.fillStyle = free ? e.style.color : '#ffffff';
+      ctx.fill();
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = e.style.color;
+      ctx.stroke();
+    }
     highlight(e);
-    if (e.style.label && e.style.showLabel !== false)
-      label(ctx, e.style.label, s.x + 7, s.y - 5, '#1c2430');
+    if (e.style.label && e.style.showLabel !== false) {
+      const c = letterCenter(s);
+      place(e, 'letter', e.style.label, c.x, c.y, '#1c2430', 15);
+    }
   });
 }

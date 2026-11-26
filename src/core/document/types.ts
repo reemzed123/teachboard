@@ -184,6 +184,12 @@ export interface GeoStyle {
   showValue?: boolean;
   /** סימון פנימי: אלמנט שנוצר אוטומטית עבור מצולע (למשל אלכסונים) – "<id>:<סוג>" */
   tag?: string;
+  /** הזזת התווית (שם הנקודה / הערך / הביטוי) ממקומה הרגיל – אחרי גרירה */
+  labelOffset?: { dx: number; dy: number };
+  /** רדיוס הקשת הקטנה של זווית (ברירת מחדל 26) */
+  arcRadius?: number;
+  /** נקודה: להסתיר את העיגול (השם יכול להישאר) */
+  hideDot?: boolean;
 }
 
 export interface GeoElement {
