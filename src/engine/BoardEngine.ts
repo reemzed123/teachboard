@@ -1,3 +1,4 @@
+import { visibleObjects } from '../core/document/layers';
 import Konva from 'konva';
 import { inflate, unionRects, type Rect } from '../core/geometry/rect';
 import {
@@ -131,7 +132,7 @@ export class BoardEngine {
 
     this.view = store.getState().view;
     this.renderedView = this.view;
-    this.objects.sync(currentPage(store.getState()).objects);
+    this.objects.sync(visibleObjects(currentPage(store.getState())));
     this.resize();
     this.restorePageView();
     this.updateCursor();
@@ -190,7 +191,7 @@ export class BoardEngine {
       this.activePointerId = null;
     }
     if (s.doc !== prev.doc || pageChanged) {
-      this.objects.sync(currentPage(s).objects);
+      this.objects.sync(visibleObjects(currentPage(s)));
       this.requestOverlay();
     }
     if (pageChanged) {

@@ -1,3 +1,4 @@
+import { visibleObjects } from '../../core/document/layers';
 import type { BoardObject, ObjectId } from '../../core/document/types';
 import {
   rectFromPoints,
@@ -50,7 +51,7 @@ export class SelectTool implements ToolHandler {
   }
 
   private hitTest(p: InputPoint, locked = false): BoardObject | null {
-    const objects = this.page().objects;
+    const objects = visibleObjects(this.page());
     const tol = 6 / this.ctx.view().scale;
     for (let i = objects.length - 1; i >= 0; i--) {
       const o = objects[i]!;
@@ -185,7 +186,7 @@ export class SelectTool implements ToolHandler {
     if (!hit) {
       const lockedHit = this.hitTest(p, true);
       if (lockedHit) {
-        state.setSelection(expandGroups(page.objects, [lockedHit.id]));
+        state.setSelection(expandGroups(visibleObjects(page), [lockedHit.id]));
         this.mode = { kind: 'idle' };
         this.ctx.requestOverlay();
         return;
@@ -193,7 +194,7 @@ export class SelectTool implements ToolHandler {
     }
 
     if (hit && !state.selection.includes(hit.id)) {
-      const group = expandGroups(page.objects, [hit.id]);
+      const group = expandGroups(visibleObjects(page), [hit.id]);
       state.setSelection(s.shiftKey ? [...new Set([...state.selection, ...group])] : group);
       this.originals = this.selected();
       this.mode = { kind: 'move', start: p, dx: 0, dy: 0 };
@@ -241,13 +242,13 @@ export class SelectTool implements ToolHandler {
       const rect = rectFromPoints({ x: m.start.bx, y: m.start.by }, { x: m.end.bx, y: m.end.by });
       if (rect.width > 0 || rect.height > 0) {
         const page = this.page();
-        const found = page.objects
+        const found = visibleObjects(page)
           .filter(
             (o) =>
               !o.locked && rectsIntersect(objectBounds(o), rect) && objectIntersectsRect(o, rect),
           )
           .map((o) => o.id);
-        const withGroups = expandGroups(page.objects, found);
+        const withGroups = expandGroups(visibleObjects(page), found);
         state.setSelection(
           s.shiftKey ? [...new Set([...state.selection, ...withGroups])] : withGroups,
         );

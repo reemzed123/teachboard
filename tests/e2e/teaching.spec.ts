@@ -122,3 +122,33 @@ test('PDF category has its own working panel', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'פתיחת PDF כשיעור חדש' })).toBeVisible();
   await expect(page.getByText('מתוכננים לשלב')).toHaveCount(0);
 });
+
+test('layers: write in an "answers" layer, hide it (not drawn, not exported), show it again', async ({
+  page,
+}) => {
+  const layers = page.getByTestId('layers');
+  await layers.getByRole('button', { name: 'שכבה חדשה' }).click();
+  await stroke(page, 200);
+  await teachingPanel(page);
+  // שכבה ראשית
+  await layers.getByRole('radio', { name: 'כתיבה בשכבה: שכבה ראשית' }).check();
+  await stroke(page, 400);
+  const drawn = () => page.evaluate(() => (window as any).__tb.runtime.engine.objectCount);
+  await expect.poll(drawn).toBe(2);
+  await teachingPanel(page);
+  await layers.getByRole('button', { name: 'הסתרת השכבה שכבה 2' }).click();
+  await expect.poll(drawn).toBe(1);
+  expect(await count(page)).toBe('2'); // התוכן לא נמחק
+  await layers.getByRole('button', { name: 'הצגת השכבה שכבה 2' }).click();
+  await expect.poll(drawn).toBe(2);
+});
+
+test('page zones: columns are drawn and saved with the page', async ({ page }) => {
+  await page.getByRole('button', { name: 'תבניות ורקעים' }).click();
+  await page.getByTestId('zones-cols').selectOption('3');
+  const zones = await page.evaluate(() => {
+    const s = (window as any).__tb.runtime.board.getState();
+    return s.doc.pages[0].background.zones;
+  });
+  expect(zones).toEqual({ cols: 3, rows: 1 });
+});

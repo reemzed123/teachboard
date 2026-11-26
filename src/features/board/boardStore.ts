@@ -12,7 +12,9 @@ import {
   type Page,
   type PageProps,
   type PageBackground,
+  type PageLayer,
 } from '../../core/document/types';
+import { effectiveLayer, MAX_LAYERS, visibleObjects, withLayer } from '../../core/document/layers';
 import type { SettingsStorage } from '../../platform/types';
 import { parseToolPrefs, type ToolId, type ToolPrefs } from './toolPrefs';
 import {
@@ -57,6 +59,16 @@ export interface BoardState extends DocState {
   setView(view: ViewState): void;
   markPen(withPressure: boolean): void;
   clearPage(): void;
+
+  /** השכבה שאליה נכנס תוכן חדש בעמוד הנוכחי (null = הראשית). לא נשמר בשיעור. */
+  activeLayer: string | null;
+  setActiveLayer(id: string | null): void;
+  addLayer(name: string): void;
+  renameLayer(id: string, name: string): void;
+  setLayerHidden(id: string, hidden: boolean): void;
+  /** מחיקת שכבה: התוכן שלה עובר לשכבה הראשית (לא נמחק) */
+  deleteLayer(id: string): void;
+  moveSelectionToLayer(id: string | null): void;
 
   /** עולה בכל טעינת שיעור (כדי שהמנוע יידע לאפס תצוגה) */
   docEpoch: number;
@@ -121,6 +133,29 @@ export function createPage(base?: Partial<PageProps>): Page {
   };
 }
 
+/** פעולות שבהן אובייקט חדש שייך לשכבה שלו (לא לשכבה הפעילה) */
+const KEEP_LAYER_LABELS = new Set(['erase', 'duplicate', 'duplicatePage', 'debug']);
+
+/** אובייקטים חדשים נכנסים לשכבה הפעילה (הדבקה – תמיד לשכבה הפעילה) */
+function withActiveLayer(s: BoardState, label: string, ops: Op[]): Op[] {
+  if (KEEP_LAYER_LABELS.has(label)) return ops;
+  const page = currentPage(s);
+  const layer = effectiveLayer(page, s.activeLayer);
+  return ops.map((op) => {
+    if (op.type !== 'add' || op.pageId !== page.id) return op;
+    return {
+      ...op,
+      objects: op.objects.map((o) => {
+        if (label !== 'paste' && o.layer !== undefined) return o;
+        const copy = { ...o };
+        if (layer) copy.layer = layer;
+        else delete copy.layer;
+        return copy;
+      }),
+    };
+  });
+}
+
 /** רקע לעמוד חדש "כמו הנוכחי" – בלי עמוד ה-PDF (עמוד חדש הוא דף ריק) */
 function blankBackground(bg: PageBackground): PageBackground {
   const copy = structuredClone(bg);
@@ -179,7 +214,7 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
       pressureDetected: false,
 
       commit(label, ops) {
-        apply(commit(get(), label, ops));
+        apply(commit(get(), label, withActiveLayer(get(), label, ops)));
       },
       undo() {
         apply(undo(get()));
@@ -210,10 +245,112 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
       clearPage() {
         const s = get();
         const page = s.doc.pages.find((p) => p.id === s.pageId);
-        if (!page || page.objects.length === 0) return;
-        s.commit('clearPage', [
-          { type: 'remove', pageId: s.pageId, ids: page.objects.map((o) => o.id) },
+        // רק מה שגלוי – שכבות מוסתרות לא נמחקות
+        const ids = page ? visibleObjects(page).map((o) => o.id) : [];
+        if (ids.length === 0) return;
+        s.commit('clearPage', [{ type: 'remove', pageId: s.pageId, ids }]);
+      },
+
+      activeLayer: null,
+      setActiveLayer(id) {
+        set({ activeLayer: effectiveLayer(currentPage(get()), id) });
+      },
+      addLayer(name) {
+        const s = get();
+        const page = currentPage(s);
+        if ((page.layers?.length ?? 0) >= MAX_LAYERS) return;
+        const layer: PageLayer = { id: newId('l'), name: name.slice(0, 40) };
+        s.commit('addLayer', [
+          {
+            type: 'setPageProps',
+            pageId: s.pageId,
+            props: { layers: withLayer(page.layers, layer) },
+          },
         ]);
+        set({ activeLayer: layer.id });
+      },
+      renameLayer(id, name) {
+        const s = get();
+        const page = currentPage(s);
+        const clean = name.trim().slice(0, 40);
+        if (!clean || !page.layers?.some((l) => l.id === id)) return;
+        s.commit('renameLayer', [
+          {
+            type: 'setPageProps',
+            pageId: s.pageId,
+            props: { layers: page.layers.map((l) => (l.id === id ? { ...l, name: clean } : l)) },
+          },
+        ]);
+      },
+      setLayerHidden(id, hidden) {
+        const s = get();
+        const page = currentPage(s);
+        if (!page.layers?.some((l) => l.id === id)) return;
+        s.commit('layerVisibility', [
+          {
+            type: 'setPageProps',
+            pageId: s.pageId,
+            props: {
+              layers: page.layers.map((l) => {
+                if (l.id !== id) return l;
+                const next = { ...l };
+                if (hidden) next.hidden = true;
+                else delete next.hidden;
+                return next;
+              }),
+            },
+          },
+        ]);
+        const after = get();
+        // שכבה שהוסתרה: לא כותבים אליה, ומה שנבחר בה – יוצא מהבחירה
+        const hiddenIds = new Set(
+          currentPage(after)
+            .objects.filter((o) => o.layer === id)
+            .map((o) => o.id),
+        );
+        set({
+          activeLayer: effectiveLayer(currentPage(after), after.activeLayer),
+          selection: hidden ? after.selection.filter((x) => !hiddenIds.has(x)) : after.selection,
+        });
+      },
+      deleteLayer(id) {
+        const s = get();
+        const page = currentPage(s);
+        if (!page.layers?.some((l) => l.id === id)) return;
+        const moved = page.objects
+          .filter((o) => o.layer === id)
+          .map((o) => {
+            const copy = { ...o };
+            delete copy.layer;
+            return copy;
+          });
+        const layers = page.layers.filter((l) => l.id !== id);
+        s.commit('deleteLayer', [
+          ...(moved.length ? [{ type: 'replace' as const, pageId: s.pageId, objects: moved }] : []),
+          {
+            type: 'setPageProps',
+            pageId: s.pageId,
+            props: { layers: layers.length ? layers : undefined },
+          },
+        ]);
+        if (get().activeLayer === id) set({ activeLayer: null });
+      },
+      moveSelectionToLayer(id) {
+        const s = get();
+        const page = currentPage(s);
+        const target = id && page.layers?.some((l) => l.id === id) ? id : null;
+        const ids = new Set(s.selection);
+        const changed = page.objects
+          .filter((o) => ids.has(o.id) && (o.layer ?? null) !== target)
+          .map((o) => {
+            const copy = { ...o };
+            if (target) copy.layer = target;
+            else delete copy.layer;
+            return copy;
+          });
+        if (changed.length)
+          s.commit('moveToLayer', [{ type: 'replace', pageId: s.pageId, objects: changed }]);
+        if (target && page.layers?.find((l) => l.id === target)?.hidden) set({ selection: [] });
       },
 
       pageViews: {},
@@ -344,6 +481,7 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
         set({
           pageId,
           selection: [],
+          activeLayer: null,
           pageViews: { ...s.pageViews, [s.pageId]: s.view },
         });
       },
@@ -396,6 +534,7 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
           history: emptyHistory(),
           pageId,
           selection: [],
+          activeLayer: null,
           pageViews: opts?.pageViews ?? {},
         });
       },

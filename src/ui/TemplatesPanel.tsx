@@ -67,6 +67,36 @@ export function TemplatesPanel() {
         </fieldset>
       )}
 
+      {page.layout === 'bounded' && (
+        <fieldset className="tb-field">
+          <legend>{t('page.zones')}</legend>
+          {(['cols', 'rows'] as const).map((k) => (
+            <label key={k} className="tb-select-inline">
+              {t(`page.zones.${k}`)}
+              <select
+                data-testid={`zones-${k}`}
+                value={bg.zones?.[k] ?? 1}
+                onChange={(e) => {
+                  const zones = { cols: bg.zones?.cols ?? 1, rows: bg.zones?.rows ?? 1 };
+                  zones[k] = Number(e.target.value);
+                  const next = { ...bg };
+                  if (zones.cols > 1 || zones.rows > 1) next.zones = zones;
+                  else delete next.zones;
+                  setProps({ background: next });
+                }}
+              >
+                {[1, 2, 3, 4].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+          <p className="tb-help">{t('page.zones.help')}</p>
+        </fieldset>
+      )}
+
       <fieldset className="tb-field">
         <legend>{t('page.pattern')}</legend>
         <div className="tb-pattern-grid" role="radiogroup" aria-label={t('page.pattern')}>

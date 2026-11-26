@@ -206,3 +206,20 @@ export function isDarkColor(hex: string): boolean {
   const b = n & 255;
   return 0.2126 * r + 0.7152 * g + 0.0722 * b < 128;
 }
+
+/** קווי החלוקה לאזורים (עמוד מחברת בלבד) – בקואורדינטות לוח */
+export function zoneLines(
+  page: Pick<Page, 'layout' | 'size' | 'background'>,
+): { x1: number; y1: number; x2: number; y2: number }[] {
+  const z = page.background.zones;
+  if (!z || page.layout !== 'bounded') return [];
+  const { width: w, height: h } = page.size;
+  const out: { x1: number; y1: number; x2: number; y2: number }[] = [];
+  for (let i = 1; i < z.cols; i++)
+    out.push({ x1: (w * i) / z.cols, y1: 0, x2: (w * i) / z.cols, y2: h });
+  for (let i = 1; i < z.rows; i++)
+    out.push({ x1: 0, y1: (h * i) / z.rows, x2: w, y2: (h * i) / z.rows });
+  return out;
+}
+
+export const ZONE_LINE = { color: '#8a94a6', width: 2 } as const;

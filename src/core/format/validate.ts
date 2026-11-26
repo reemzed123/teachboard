@@ -1,5 +1,6 @@
 import { SPACING_LIMITS } from '../background/pattern';
 import { newId } from '../document/ids';
+import { MAX_LAYERS } from '../document/layers';
 import {
   DEFAULT_BACKGROUND,
   DOCUMENT_VERSION,
@@ -21,6 +22,7 @@ import {
   type MeasureKind,
   type Transform,
   type PageBackground,
+  type PageLayer,
 } from '../document/types';
 
 // בדיקת תקינות של מסמך שנקרא מאחסון או מקובץ.
@@ -69,6 +71,21 @@ function cleanId(v: unknown, used: Set<string>, prefix: string): string {
   return id;
 }
 
+function cleanLayers(v: unknown): PageLayer[] {
+  if (!Array.isArray(v)) return [];
+  const out: PageLayer[] = [];
+  const seen = new Set<string>();
+  for (const l of v.slice(0, MAX_LAYERS)) {
+    if (!isObj(l) || typeof l.id !== 'string' || !ID.test(l.id) || seen.has(l.id)) continue;
+    seen.add(l.id);
+    const name = typeof l.name === 'string' ? cleanString(l.name, 40) : '';
+    const layer: PageLayer = { id: l.id, name: name || l.id };
+    if (l.hidden === true) layer.hidden = true;
+    out.push(layer);
+  }
+  return out;
+}
+
 function cleanBackground(v: unknown): PageBackground {
   if (!isObj(v)) return { ...DEFAULT_BACKGROUND };
   const bg: PageBackground = {
@@ -82,6 +99,11 @@ function cleanBackground(v: unknown): PageBackground {
   };
   if (typeof v.imageAssetId === 'string' && ASSET_ID.test(v.imageAssetId)) {
     bg.imageAssetId = v.imageAssetId;
+  }
+  if (isObj(v.zones)) {
+    const cols = Math.round(num(v.zones.cols, 1, 4) ?? 1);
+    const rows = Math.round(num(v.zones.rows, 1, 4) ?? 1);
+    if (cols > 1 || rows > 1) bg.zones = { cols, rows };
   }
   if (isObj(v.pdf) && typeof v.pdf.assetId === 'string' && ASSET_ID.test(v.pdf.assetId)) {
     const page = num(v.pdf.page, 0, 100000);
@@ -105,9 +127,13 @@ const color = (v: unknown): string | null =>
   typeof v === 'string' && HEX.test(v) ? v.toLowerCase() : null;
 
 /** שדות משותפים: נעילה וקבוצה */
-function withCommon<T extends { locked?: boolean; groupId?: string }>(obj: T, v: Obj): T {
+function withCommon<T extends { locked?: boolean; groupId?: string; layer?: string }>(
+  obj: T,
+  v: Obj,
+): T {
   if (v.locked === true) obj.locked = true;
   if (typeof v.groupId === 'string' && ID.test(v.groupId)) obj.groupId = v.groupId;
+  if (typeof v.layer === 'string' && ID.test(v.layer)) obj.layer = v.layer;
   return obj;
 }
 
@@ -455,7 +481,12 @@ export function validateDocument(raw: unknown, report?: ValidationReport): Board
       if (clean) objects.push(clean);
       else skipped++;
     }
+    const layers = cleanLayers(p.layers);
+    const layerIds = new Set(layers.map((l) => l.id));
+    // אובייקט בשכבה שלא קיימת – עובר לשכבה הראשית
+    for (const o of objects) if (o.layer && !layerIds.has(o.layer)) delete o.layer;
     return {
+      ...(layers.length ? { layers } : {}),
       id: cleanId(p.id, usedIds, 'p'),
       layout: p.layout === 'infinite' ? 'infinite' : 'bounded',
       size: {

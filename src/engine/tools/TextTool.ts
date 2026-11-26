@@ -1,3 +1,4 @@
+import { visibleObjects } from '../../core/document/layers';
 import { objectHitsPoint } from '../../core/objects/geometry';
 import { currentPage } from '../../features/board/boardStore';
 import type { PointerSample, ToolContext, ToolHandler } from './types';
@@ -17,7 +18,7 @@ export class TextTool implements ToolHandler {
     }
     const p = s.point;
     const tol = 4 / this.ctx.view().scale;
-    const objects = currentPage(state).objects;
+    const objects = visibleObjects(currentPage(state));
     for (let i = objects.length - 1; i >= 0; i--) {
       const o = objects[i]!;
       if (o.type === 'text' && !o.locked && objectHitsPoint(o, p.bx, p.by, tol)) {

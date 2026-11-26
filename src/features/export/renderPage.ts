@@ -1,3 +1,4 @@
+import { visibleObjects } from '../../core/document/layers';
 import type { Rect } from '../../core/geometry/rect';
 import { unionRects } from '../../core/geometry/rect';
 import type { Page } from '../../core/document/types';
@@ -12,7 +13,7 @@ import { loadGeometryKernel } from '../../engine/render/geoCache';
 /** האזור שמייצאים: עמוד מחברת – הדף; לוח אינסופי – התוכן עם שוליים. */
 export function exportArea(page: Page, margin = 40): Rect {
   if (page.layout === 'bounded') return { x: 0, y: 0, ...page.size };
-  const content = unionRects(page.objects.map(objectBounds));
+  const content = unionRects(visibleObjects(page).map(objectBounds));
   if (!content) return { x: 0, y: 0, ...page.size };
   return {
     x: content.x - margin,
@@ -33,7 +34,7 @@ export async function prepareMath(pages: readonly Page[]): Promise<void> {
 }
 
 export function drawObjects(ctx: CanvasRenderingContext2D, page: Page): void {
-  for (const o of page.objects) drawObjectWorld(ctx, o);
+  for (const o of visibleObjects(page)) drawObjectWorld(ctx, o);
 }
 
 /** מצייר את העמוד על canvas חדש. scale = פיקסלים ליחידת לוח. */

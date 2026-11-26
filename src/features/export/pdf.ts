@@ -1,3 +1,4 @@
+import { visibleObjects } from '../../core/document/layers';
 import {
   BlendMode,
   degrees,
@@ -9,7 +10,13 @@ import {
   type PDFImage,
   type PDFPage,
 } from 'pdf-lib';
-import { generatePattern, LINE_WIDTH_PX, patternColors } from '../../core/background/pattern';
+import {
+  generatePattern,
+  LINE_WIDTH_PX,
+  patternColors,
+  ZONE_LINE,
+  zoneLines,
+} from '../../core/background/pattern';
 import type {
   BoardDocument,
   GeometryObject,
@@ -168,6 +175,17 @@ async function addPage(pdf: PDFDocument, page: Page, assets: PdfAssets, cache: E
     }
   }
 
+  // חלוקה לאזורים
+  const zc = parseColor(ZONE_LINE.color);
+  for (const l of zoneLines(page)) {
+    out.drawLine({
+      start: { x: X(l.x1), y: Y(l.y1) },
+      end: { x: X(l.x2), y: Y(l.y2) },
+      thickness: ZONE_LINE.width * PX_TO_PT,
+      color: zc.color,
+    });
+  }
+
   // רקע: אותם קווים כמו על המסך
   const pattern = generatePattern(page, area, 1);
   const colors = patternColors(page.background.color);
@@ -213,7 +231,7 @@ async function addPage(pdf: PDFDocument, page: Page, assets: PdfAssets, cache: E
   }
 
   // האובייקטים – לפי סדר השכבות
-  for (const o of page.objects) {
+  for (const o of visibleObjects(page)) {
     const t = o.transform;
     const base = {
       x: X(t.x),

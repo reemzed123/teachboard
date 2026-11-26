@@ -14,7 +14,7 @@
 
 ### document.json
 
-- `pages[]`: `id`, `layout` (`bounded` = עמוד מחברת, `infinite` = לוח אינסופי), `size {width,height}` (יחידות לוח; ברירת מחדל A4 לרוחב 1123×794), `background {pattern, color, spacing, imageAssetId?, pdf? {assetId, page}}` (`page` מתחיל ב-0), `objects[]`.
+- `pages[]`: `id`, `layout` (`bounded` = עמוד מחברת, `infinite` = לוח אינסופי), `size {width,height}` (יחידות לוח; ברירת מחדל A4 לרוחב 1123×794), `background {pattern, color, spacing, imageAssetId?, pdf? {assetId, page}, zones? {cols, rows}}` (`page` מתחיל ב-0; אזורים 1–4), `layers? [{id, name, hidden?}]`; לכל אובייקט `layer?` (מזהה שכבה; בלי = הראשית), `objects[]`.
 - `objects[]` – שדות משותפים לכל סוג: `id`, `type`, `transform {x, y, rotation (מעלות), scale (אחיד)}`, `locked?`, `groupId?`.
   - `type: "ink"` – כתב יד: `style {kind: pen|highlighter, color, width, opacity}`, `points` (שלשות x,y,לחץ ביחס ל-transform), `pressure`.
   - `type: "shape"` – קו/חץ: `kind: line|arrow`, `dx, dy` (נקודת הסוף ביחס להתחלה), `style {color, width, opacity, dash: solid|dashed|dotted}`, `arrowStart?`.

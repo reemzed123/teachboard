@@ -1,3 +1,4 @@
+import { visibleObjects } from '../../core/document/layers';
 import { newId } from '../../core/document/ids';
 import type { GeoElement, GeometryObject } from '../../core/document/types';
 import {
@@ -64,7 +65,7 @@ export class GeometryTool implements ToolHandler {
   private construction(): GeometryObject | null {
     const page = currentPage(this.ctx.state());
     return (
-      (page.objects.find((o) => o.type === 'geometry' && !o.locked) as
+      (visibleObjects(page).find((o) => o.type === 'geometry' && !o.locked) as
         GeometryObject | undefined) ?? null
     );
   }

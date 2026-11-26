@@ -1774,3 +1774,56 @@ input:focus-visible {
   background: var(--tb-accent-soft);
   color: var(--tb-accent);
 }
+
+/* שכבות */
+.tb-layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.tb-layer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid var(--tb-border);
+  border-radius: 8px;
+}
+
+.tb-layer-row[data-active] {
+  border-color: var(--tb-accent);
+  background: var(--tb-accent-soft);
+}
+
+.tb-layer-name {
+  flex: 1;
+  min-width: 0;
+}
+
+input.tb-layer-name {
+  min-height: 30px;
+}
+
+.tb-icon-mini {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tb-text);
+  cursor: pointer;
+}
+
+.tb-icon-mini:hover {
+  background: var(--tb-accent-soft);
+}
+
+.tb-icon-mini[aria-pressed='false'] {
+  color: var(--tb-text-muted);
+}

@@ -1,5 +1,11 @@
 import Konva from 'konva';
-import { generatePattern, LINE_WIDTH_PX, patternColors } from '../../core/background/pattern';
+import {
+  generatePattern,
+  LINE_WIDTH_PX,
+  patternColors,
+  ZONE_LINE,
+  zoneLines,
+} from '../../core/background/pattern';
 import type { Rect } from '../../core/geometry/rect';
 import type { Page } from '../../core/document/types';
 
@@ -84,6 +90,21 @@ export function drawPageBackground(
     const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
     const img = images.getPdfPage(bg.pdf.assetId, bg.pdf.page, scale * dpr, page.size);
     if (img) ctx.drawImage(img, 0, 0, page.size.width, page.size.height);
+  }
+
+  // חלוקה לאזורים
+  const zones = zoneLines(page);
+  if (zones.length) {
+    ctx.save();
+    ctx.strokeStyle = ZONE_LINE.color;
+    ctx.lineWidth = ZONE_LINE.width;
+    ctx.beginPath();
+    for (const l of zones) {
+      ctx.moveTo(l.x1, l.y1);
+      ctx.lineTo(l.x2, l.y2);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
 
   const pattern = generatePattern(page, visible, scale);

@@ -3,6 +3,7 @@ import { useApp, useBoard, useRuntime, useTeaching } from '../app/StoreContext';
 import { SPOTLIGHT_LIMITS, type CoverSide } from '../features/teaching/teachingStore';
 import { t } from '../i18n';
 import { SidePanel } from './SidePanel';
+import { LayersSection } from './LayersSection';
 
 const SIDES: CoverSide[] = ['top', 'bottom', 'right', 'left'];
 
@@ -128,6 +129,7 @@ export function TeachingPanel() {
         </button>
         <p className="tb-help">{t('teaching.presentHelp')}</p>
       </div>
+      <LayersSection />
     </SidePanel>
   );
 }

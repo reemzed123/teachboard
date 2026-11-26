@@ -37,6 +37,8 @@ interface ObjectBase {
   locked?: boolean;
   /** אובייקטים עם אותו מזהה קבוצה נבחרים ונערכים יחד */
   groupId?: string;
+  /** השכבה (מזהה מ-page.layers); בלי – השכבה הראשית */
+  layer?: string;
 }
 
 /**
@@ -228,6 +230,8 @@ export interface PageBackground {
   imageAssetId?: string;
   /** עמוד מקובץ PDF (המקור נשמר כמו שהוא; כותבים מעליו) */
   pdf?: { assetId: string; page: number };
+  /** חלוקה לאזורים בקווים (עמוד מחברת בלבד) */
+  zones?: PageZones;
 }
 
 export interface Page {
@@ -236,8 +240,22 @@ export interface Page {
   /** גודל עמוד המחברת ביחידות לוח (משמש גם לייצוא PDF) */
   size: { width: number; height: number };
   background: PageBackground;
-  /** סדר הרשימה = סדר השכבות (האחרון מצויר למעלה) */
+  /** סדר הרשימה = סדר הציור (האחרון מצויר למעלה) */
   objects: BoardObject[];
+  /** שכבות נוספות מעל השכבה הראשית (אפשר להסתיר/להציג) */
+  layers?: PageLayer[];
+}
+
+export interface PageLayer {
+  id: string;
+  name: string;
+  hidden?: boolean;
+}
+
+/** חלוקת עמוד לאזורים (עמודות ושורות) */
+export interface PageZones {
+  cols: number;
+  rows: number;
 }
 
 /** A4 לרוחב, ב-96 נקודות לאינץ' – מתאים להדפסה ול-PDF. */
@@ -249,7 +267,7 @@ export const DEFAULT_BACKGROUND: PageBackground = {
   spacing: 32,
 };
 
-export type PageProps = Pick<Page, 'layout' | 'size' | 'background'>;
+export type PageProps = Pick<Page, 'layout' | 'size' | 'background' | 'layers'>;
 
 export interface BoardDocument {
   version: typeof DOCUMENT_VERSION;
