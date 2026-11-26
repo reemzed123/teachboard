@@ -466,3 +466,76 @@ test('switching windows mid-stroke (Alt+Tab) does not leave a stuck stroke', asy
   await page.mouse.up();
   await expect(page.getByTestId('board')).toHaveAttribute('data-object-count', '1');
 });
+
+test('hold-to-shape: holding the pen at the end of a rough circle makes a clean circle (undoable)', async ({
+  page,
+}) => {
+  const box = (await page.getByTestId('board').boundingBox())!;
+  const cx = box.x + 300;
+  const cy = box.y + 260;
+  const inkPoints = () =>
+    page.evaluate(() => {
+      const s = (window as any).__tb.runtime.board.getState();
+      const page = s.doc.pages.find((p: any) => p.id === s.pageId);
+      return page.objects.map((o: any) => ({ n: o.points.length / 3, pressure: o.pressure }));
+    });
+  // מעגל לא מדויק
+  await page.mouse.move(cx + 100, cy);
+  await page.mouse.down();
+  for (let i = 1; i <= 40; i++) {
+    const a = (i / 40) * Math.PI * 2;
+    const r = 100 + Math.sin(i * 1.9) * 6;
+    await page.mouse.move(cx + r * Math.cos(a), cy + r * Math.sin(a));
+  }
+  await page.waitForTimeout(700); // מחזיקים במקום
+  await page.mouse.up();
+  await expect.poll(async () => (await inkPoints()).length).toBe(1);
+  const [circle] = await inkPoints();
+  expect(circle.pressure).toBe(false);
+  // צורה נקייה: הרבה נקודות על מעגל מדויק
+  const roundness = await page.evaluate(() => {
+    const s = (window as any).__tb.runtime.board.getState();
+    const o = s.doc.pages.find((p: any) => p.id === s.pageId).objects[0];
+    const xs: number[] = [];
+    const ys: number[] = [];
+    for (let i = 0; i < o.points.length; i += 3) {
+      xs.push(o.points[i] + o.transform.x);
+      ys.push(o.points[i + 1] + o.transform.y);
+    }
+    const mx = (Math.max(...xs) + Math.min(...xs)) / 2;
+    const my = (Math.max(...ys) + Math.min(...ys)) / 2;
+    const d = xs.map((x, i) => Math.hypot(x - mx, ys[i]! - my));
+    return (Math.max(...d) - Math.min(...d)) / Math.max(...d);
+  });
+  expect(roundness).toBeLessThan(0.03);
+
+  // בלי החזקה – הקו נשאר כמו שצויר
+  await page.mouse.move(box.x + 80, box.y + 450);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 300, box.y + 470, { steps: 10 });
+  await page.mouse.up();
+  await expect.poll(async () => (await inkPoints()).length).toBe(2);
+  expect((await inkPoints())[1].n).toBeGreaterThan(2);
+
+  // עצירה בפינה והמשך – לא מתיישר לקו
+  await page.mouse.move(box.x + 500, box.y + 400);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 650, box.y + 400, { steps: 10 });
+  await page.waitForTimeout(700);
+  await page.mouse.move(box.x + 580, box.y + 300, { steps: 10 });
+  await page.mouse.up();
+  await expect.poll(async () => (await inkPoints()).length).toBe(3);
+  const height = await page.evaluate(() => {
+    const s = (window as any).__tb.runtime.board.getState();
+    const o = s.doc.pages.find((p: any) => p.id === s.pageId).objects[2];
+    const ys = o.points.filter((_: number, i: number) => i % 3 === 1);
+    return Math.max(...ys) - Math.min(...ys);
+  });
+  expect(height).toBeGreaterThan(50); // הקו המשיך למעלה – לא נשאר קו ישר
+
+  // ביטול רגיל
+  await page.keyboard.press('Control+z');
+  await page.keyboard.press('Control+z');
+  await page.keyboard.press('Control+z');
+  await expect.poll(async () => (await inkPoints()).length).toBe(0);
+});

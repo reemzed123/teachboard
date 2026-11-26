@@ -34,6 +34,8 @@ export interface ToolPrefs {
   usePressure: boolean;
   /** החלקת כתב יד: 0 ללא, 1 עדינה, 2 רגילה, 3 חזקה */
   smoothing: SmoothingLevel;
+  /** החזקת העט במקום בסוף קו הופכת אותו לצורה נקייה (קו, משולש, מלבן, מעגל) */
+  shapeSnap: boolean;
   /** קו ישר וחץ (הצבע והעובי – כמו העט) */
   shape: { dash: LineDash; arrowStart: boolean };
   text: { fontSize: number; bold: boolean };
@@ -82,6 +84,7 @@ export function defaultToolPrefs(): ToolPrefs {
     eraser: { mode: 'stroke', size: 24 },
     usePressure: true,
     smoothing: 2,
+    shapeSnap: true,
     shape: { dash: 'solid', arrowStart: false },
     text: { fontSize: 32, bold: false },
     favorites: [],
@@ -127,6 +130,10 @@ export function parseToolPrefs(raw: unknown): ToolPrefs {
     smoothing: [0, 1, 2, 3].includes((raw as Record<string, unknown>).smoothing as number)
       ? ((raw as Record<string, unknown>).smoothing as SmoothingLevel)
       : d.smoothing,
+    shapeSnap:
+      typeof (raw as Record<string, unknown>).shapeSnap === 'boolean'
+        ? ((raw as Record<string, unknown>).shapeSnap as boolean)
+        : d.shapeSnap,
     shape: {
       dash: (['solid', 'dashed', 'dotted'] as const).includes(r.shape?.dash as LineDash)
         ? (r.shape!.dash as LineDash)

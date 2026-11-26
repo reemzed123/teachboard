@@ -195,6 +195,18 @@ export function DrawingPanel() {
             <label className="tb-check">
               <input
                 type="checkbox"
+                data-testid="shape-snap"
+                checked={prefs.shapeSnap}
+                onChange={(e) => updatePrefs((p) => ({ ...p, shapeSnap: e.target.checked }))}
+              />
+              {t('drawing.shapeSnap')}
+            </label>
+            <p className="tb-help">{t('drawing.shapeSnap.help')}</p>
+          </div>
+          <div className="tb-field">
+            <label className="tb-check">
+              <input
+                type="checkbox"
                 checked={prefs.usePressure}
                 onChange={(e) => updatePrefs((p) => ({ ...p, usePressure: e.target.checked }))}
               />

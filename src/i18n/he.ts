@@ -160,6 +160,9 @@ export const he = {
   'drawing.widthExact': 'עובי מדויק',
   'drawing.sizeValue': 'גודל {n}',
   'drawing.opacity': 'אטימות',
+  'drawing.shapeSnap': 'יישור לצורה בהחזקת העט',
+  'drawing.shapeSnap.help':
+    'ציירו קו, משולש, מלבן או מעגל, והשאירו את העט לחוץ במקום כחצי שנייה – הציור יהפוך לצורה נקייה. ביטול: Ctrl+Z.',
   'drawing.usePressure': 'עובי משתנה לפי לחץ העט',
   'drawing.pressure.noPen': 'עדיין לא זוהה עט דיגיטלי.',
   'drawing.pressure.detected': 'זוהה עט עם לחץ.',
