@@ -26,6 +26,16 @@ export interface LessonMeta {
   pageCount: number;
   /** תמונה ממוזערת של העמוד הראשון (data URL קטן) */
   thumbnail?: string;
+  /** התיקייה שבה השיעור נמצא (null / חסר = בראשי) */
+  folderId?: string | null;
+}
+
+export interface FolderMeta {
+  id: string;
+  name: string;
+  /** תיקיית האב (null = בראשי) */
+  parentId: string | null;
+  createdAt: number;
 }
 
 export interface LessonRecord {
@@ -65,6 +75,12 @@ export interface LessonRepository {
 
   putAsset(asset: StoredAsset): Promise<void>;
   getAsset(id: string): Promise<StoredAsset | null>;
+
+  listFolders(): Promise<FolderMeta[]>;
+  saveFolder(folder: FolderMeta): Promise<void>;
+  /** מוחק תיקייה; השיעורים ותתי-התיקיות שבה עוברים לתיקיית האב */
+  removeFolder(id: string): Promise<void>;
+  moveLesson(lessonId: string, folderId: string | null): Promise<void>;
 
   getValue(key: string): Promise<unknown>;
   setValue(key: string, value: unknown): Promise<void>;

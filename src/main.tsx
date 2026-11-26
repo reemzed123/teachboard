@@ -28,6 +28,7 @@ const lessons = createLessonController({
   repo,
   board,
   defaultTitle: t('lesson.untitled'),
+  defaultFolderName: t('folder.untitled'),
   copyTitle: (title) => t('lesson.copyOf', { title }),
   thumbnail: async (doc) => {
     await assets.ensure(referencedAssets(doc));

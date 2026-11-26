@@ -15,6 +15,7 @@ function setup(profile = `test-${++dbCounter}`) {
     repo,
     board,
     defaultTitle: 'שיעור ללא שם',
+    defaultFolderName: 'תיקייה חדשה',
     copyTitle: (t) => `${t} (עותק)`,
   });
   return { repo, board, lessons, profile };
@@ -158,5 +159,43 @@ describe('lessons and autosave', () => {
     draw(b.board, 'z');
     await b.lessons.getState().flush();
     expect(b.lessons.getState().status).toBe('saved');
+  });
+});
+
+describe('folders', () => {
+  it('create nested folders, move lessons, rename, delete keeps lessons', async () => {
+    const { lessons } = setup();
+    await lessons.getState().init();
+    const s = () => lessons.getState();
+    const lessonId = s().lessonId!;
+    const math = await s().createFolder('מתמטיקה', null);
+    const grade7 = await s().createFolder('כיתה ז', math.id);
+    await s().moveLesson(lessonId, grade7.id);
+    expect(s().lessons.find((l) => l.id === lessonId)!.folderId).toBe(grade7.id);
+
+    await s().renameFolder(grade7.id, 'כיתה ז׳');
+    expect(s().folders.find((f) => f.id === grade7.id)!.name).toBe('כיתה ז׳');
+
+    // לא ניתן להכניס תיקייה לתוך תת-תיקייה שלה
+    expect(await s().moveFolder(math.id, grade7.id)).toBe(false);
+
+    // מחיקת "מתמטיקה": "כיתה ז׳" עולה לראשי, והשיעור נשאר בתוכה
+    await s().deleteFolder(math.id);
+    expect(s().folders.map((f) => [f.name, f.parentId])).toEqual([['כיתה ז׳', null]]);
+    // מחיקת "כיתה ז׳": השיעור עובר לראשי – לא נמחק
+    await s().deleteFolder(grade7.id);
+    expect(s().lessons.find((l) => l.id === lessonId)!.folderId).toBeNull();
+  });
+
+  it('a new lesson is created in the chosen folder and autosave keeps it there', async () => {
+    const { board, lessons } = setup();
+    await lessons.getState().init();
+    const f = await lessons.getState().createFolder('א', null);
+    await lessons.getState().newLesson(f.id);
+    draw(board, 'q');
+    await lessons.getState().flush();
+    expect(
+      lessons.getState().lessons.find((l) => l.id === lessons.getState().lessonId)!.folderId,
+    ).toBe(f.id);
   });
 });

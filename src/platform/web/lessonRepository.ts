@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie';
 import { newId } from '../../core/document/ids';
 import type { BoardDocument } from '../../core/document/types';
 import type {
+  FolderMeta,
   LessonMeta,
   LessonRecord,
   LessonRepository,
@@ -29,6 +30,7 @@ class TeachBoardDB extends Dexie {
   versions!: Table<VersionRow, number>;
   assets!: Table<StoredAsset, string>;
   kv!: Table<{ key: string; value: unknown }, string>;
+  folders!: Table<FolderMeta, string>;
 
   constructor(name: string) {
     super(name);
@@ -39,6 +41,10 @@ class TeachBoardDB extends Dexie {
       versions: '++id, lessonId, savedAt',
       assets: 'id',
       kv: 'key',
+    });
+    // גרסה 2: תיקיות. שיעורים קיימים לא משתנים (בלי folderId = בראשי).
+    this.version(2).stores({
+      folders: 'id, parentId',
     });
   }
 }
@@ -134,6 +140,29 @@ export function createWebLessonRepository(profileId = 'default'): LessonReposito
 
     async getAsset(id) {
       return (await db.assets.get(id)) ?? null;
+    },
+
+    async listFolders() {
+      return db.folders.toArray();
+    },
+
+    async saveFolder(folder) {
+      await db.folders.put(folder);
+    },
+
+    async removeFolder(id) {
+      await db.transaction('rw', db.folders, db.lessons, async () => {
+        const folder = await db.folders.get(id);
+        if (!folder) return;
+        const parent = folder.parentId;
+        await db.folders.where('parentId').equals(id).modify({ parentId: parent });
+        await db.lessons.filter((l) => l.folderId === id).modify({ folderId: parent });
+        await db.folders.delete(id);
+      });
+    },
+
+    async moveLesson(lessonId, folderId) {
+      await db.lessons.update(lessonId, { folderId });
     },
 
     async getValue(key) {

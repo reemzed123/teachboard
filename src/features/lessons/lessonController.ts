@@ -2,7 +2,13 @@ import { createStore } from 'zustand/vanilla';
 import { newId } from '../../core/document/ids';
 import type { BoardDocument } from '../../core/document/types';
 import { validateDocument } from '../../core/format/validate';
-import type { LessonMeta, LessonRecord, LessonRepository, VersionMeta } from '../../platform/types';
+import type {
+  FolderMeta,
+  LessonMeta,
+  LessonRecord,
+  LessonRepository,
+  VersionMeta,
+} from '../../platform/types';
 import { createEmptyDocument, type BoardStore } from '../board/boardStore';
 
 // ניהול השיעור הפתוח: פתיחה, שמירה אוטומטית, גרסאות קודמות.
@@ -27,9 +33,17 @@ export interface LessonState {
   lessonId: string | null;
   title: string;
   lessons: LessonMeta[];
+  folders: FolderMeta[];
 
   init(): Promise<void>;
-  newLesson(): Promise<void>;
+  /** שיעור חדש (בתיקייה שנבחרה, אם יש) */
+  newLesson(folderId?: string | null): Promise<void>;
+  createFolder(name: string, parentId: string | null): Promise<FolderMeta>;
+  renameFolder(id: string, name: string): Promise<void>;
+  /** מעביר תיקייה לתיקייה אחרת. מחזיר false אם זה ייצור לולאה (תיקייה בתוך עצמה). */
+  moveFolder(id: string, parentId: string | null): Promise<boolean>;
+  deleteFolder(id: string): Promise<void>;
+  moveLesson(lessonId: string, folderId: string | null): Promise<void>;
   openLesson(id: string): Promise<void>;
   renameCurrent(title: string): Promise<void>;
   renameLesson(id: string, title: string): Promise<void>;
@@ -50,6 +64,7 @@ export interface LessonControllerDeps {
   /** יוצר תמונה ממוזערת לעמוד הראשון (לא חובה – למשל בבדיקות) */
   thumbnail?: (doc: BoardDocument) => Promise<string | undefined>;
   defaultTitle: string;
+  defaultFolderName: string;
   copyTitle: (title: string) => string;
   now?: () => number;
 }
@@ -154,10 +169,21 @@ export function createLessonController(deps: LessonControllerDeps) {
       }
     };
 
-    const createLesson = async (doc: BoardDocument, title: string) => {
+    const createLesson = async (
+      doc: BoardDocument,
+      title: string,
+      folderId: string | null = null,
+    ) => {
       const t = now();
       const record: LessonRecord = {
-        meta: { id: newId('l'), title, createdAt: t, updatedAt: t, pageCount: doc.pages.length },
+        meta: {
+          id: newId('l'),
+          title,
+          createdAt: t,
+          updatedAt: t,
+          pageCount: doc.pages.length,
+          ...(folderId ? { folderId } : {}),
+        },
         doc,
         view: { pageId: doc.pages[0]!.id, pageViews: {} },
       };
@@ -187,6 +213,7 @@ export function createLessonController(deps: LessonControllerDeps) {
       lessonId: null,
       title: '',
       lessons: [],
+      folders: [],
 
       async init() {
         try {
@@ -212,9 +239,52 @@ export function createLessonController(deps: LessonControllerDeps) {
         }
       },
 
-      async newLesson() {
+      async newLesson(folderId = null) {
         await get().flush();
-        await createLesson(createEmptyDocument(), deps.defaultTitle);
+        await createLesson(createEmptyDocument(), deps.defaultTitle, folderId);
+      },
+
+      async createFolder(name, parentId) {
+        const folder: FolderMeta = {
+          id: newId('d'),
+          name: name.trim() || deps.defaultFolderName,
+          parentId,
+          createdAt: now(),
+        };
+        await repo.saveFolder(folder);
+        await get().refreshList();
+        return folder;
+      },
+
+      async renameFolder(id, name) {
+        const folder = get().folders.find((f) => f.id === id);
+        if (!folder) return;
+        await repo.saveFolder({ ...folder, name: name.trim() || folder.name });
+        await get().refreshList();
+      },
+
+      async moveFolder(id, parentId) {
+        const folders = get().folders;
+        // אסור להכניס תיקייה לתוך עצמה או לתוך אחת מתתי-התיקיות שלה
+        for (let p = parentId; p; p = folders.find((f) => f.id === p)?.parentId ?? null) {
+          if (p === id) return false;
+        }
+        const folder = folders.find((f) => f.id === id);
+        if (!folder || folder.parentId === parentId) return true;
+        await repo.saveFolder({ ...folder, parentId });
+        await get().refreshList();
+        return true;
+      },
+
+      async deleteFolder(id) {
+        await repo.removeFolder(id);
+        await get().refreshList();
+      },
+
+      async moveLesson(lessonId, folderId) {
+        await repo.moveLesson(lessonId, folderId);
+        if (meta?.id === lessonId) meta = { ...meta, folderId };
+        await get().refreshList();
       },
 
       async openLesson(id) {
@@ -298,7 +368,7 @@ export function createLessonController(deps: LessonControllerDeps) {
       },
 
       async refreshList() {
-        set({ lessons: await repo.list() });
+        set({ lessons: await repo.list(), folders: await repo.listFolders() });
       },
     };
   });

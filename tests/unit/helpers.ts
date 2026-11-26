@@ -34,6 +34,7 @@ export function createTestRuntime(settings: unknown = null): AppRuntime {
       repo,
       board,
       defaultTitle: 'שיעור ללא שם',
+      defaultFolderName: 'תיקייה חדשה',
       copyTitle: (x) => `${x} (עותק)`,
     }),
     engine: null,
