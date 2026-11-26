@@ -539,3 +539,53 @@ test('hold-to-shape: holding the pen at the end of a rough circle makes a clean 
   await page.keyboard.press('Control+z');
   await expect.poll(async () => (await inkPoints()).length).toBe(0);
 });
+
+test('pen side button / right click opens a round quick menu (colors, eraser, undo, formula)', async ({
+  page,
+}) => {
+  const box = (await page.getByTestId('board').boundingBox())!;
+  const menu = page.getByTestId('quick-menu');
+  const prefs = () =>
+    page.evaluate(() => {
+      const s = (window as any).__tb.runtime.board.getState();
+      return { tool: s.tool, color: s.prefs.pen.color };
+    });
+
+  // קליק ימני
+  await page.mouse.click(box.x + 300, box.y + 250, { button: 'right' });
+  await expect(menu.locator('[data-quick="undo"]')).toBeVisible();
+  await menu.locator('[data-quick="red"]').click();
+  await expect(menu).toHaveCount(0);
+  expect(await prefs()).toEqual({ tool: 'pen', color: '#dc2626' });
+
+  // כפתור הצד של העט (החוד על הלוח) – לא מצייר, פותח את התפריט
+  await dispatchPointer(page, 'pointerdown', 300, 250, {
+    pointerType: 'pen',
+    button: 2,
+    buttons: 3,
+  });
+  await dispatchPointer(page, 'pointerup', 300, 250, { pointerType: 'pen', button: 2 });
+  await expect(menu.locator('[data-quick="undo"]')).toBeVisible();
+  expect(await page.getByTestId('board').getAttribute('data-object-count')).toBe('0');
+  await menu.locator('[data-quick="eraser"]').click();
+  expect((await prefs()).tool).toBe('eraser');
+
+  // Escape סוגר; "ביטול" מבטל את הפעולה האחרונה
+  await page.mouse.click(box.x + 300, box.y + 250, { button: 'right' });
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await page.evaluate(() => (window as any).__tb.runtime.board.getState().setTool('pen'));
+  await page.mouse.move(box.x + 100, box.y + 400);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 300, box.y + 420, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.getByTestId('board')).toHaveAttribute('data-object-count', '1');
+  await page.mouse.click(box.x + 500, box.y + 250, { button: 'right' });
+  await menu.locator('[data-quick="undo"]').click();
+  await expect(page.getByTestId('board')).toHaveAttribute('data-object-count', '0');
+
+  // נוסחה חדשה
+  await page.mouse.click(box.x + 500, box.y + 250, { button: 'right' });
+  await menu.locator('[data-quick="formula"]').click();
+  await expect(page.getByTestId('formula-field')).toBeVisible();
+});

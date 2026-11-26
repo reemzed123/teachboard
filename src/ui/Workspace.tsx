@@ -10,6 +10,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { SelectionToolbar } from './SelectionToolbar';
 import { GeoCircleBar } from './GeoCircleBar';
 import { GeoLabelEditor } from './GeoLabelEditor';
+import { QuickRadialMenu } from './QuickRadialMenu';
 import { TextEditor } from './TextEditor';
 import { ZoomControls } from './ZoomControls';
 import { Spotlight } from './teaching/Spotlight';
@@ -72,6 +73,7 @@ export function Workspace() {
         <SelectionToolbar />
         <GeoCircleBar />
         <GeoLabelEditor />
+        <QuickRadialMenu />
       </ErrorBoundary>
       <ErrorBoundary fallback={() => null}>
         <PageStrip />

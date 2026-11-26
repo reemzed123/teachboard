@@ -1860,3 +1860,66 @@ input.tb-layer-name {
   gap: 6px;
   color: #15803d;
 }
+
+/* תפריט מהיר עגול (כפתור הצד של העט) */
+.tb-radial {
+  position: absolute;
+  z-index: 45;
+  width: 0;
+  height: 0;
+}
+
+.tb-radial-item,
+.tb-radial-center {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--tb-border);
+  border-radius: 50%;
+  background: var(--tb-surface);
+  color: var(--tb-text);
+  box-shadow: var(--tb-shadow);
+  cursor: pointer;
+}
+
+.tb-radial-item {
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  animation: tb-radial-in 0.12s ease-out;
+}
+
+.tb-radial-item:hover {
+  background: var(--tb-accent-soft);
+  color: var(--tb-accent);
+}
+
+.tb-radial-center {
+  left: -12px;
+  top: -12px;
+  width: 24px;
+  height: 24px;
+  background: color-mix(in srgb, var(--tb-surface) 85%, transparent);
+}
+
+.tb-radial-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+}
+
+@keyframes tb-radial-in {
+  from {
+    opacity: 0;
+    translate: 0 0;
+    scale: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tb-radial-item {
+    animation: none;
+  }
+}

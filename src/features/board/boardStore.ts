@@ -88,6 +88,9 @@ export interface BoardState extends DocState {
   /** אלמנטים נבחרים בתוך בנייה גיאומטרית (לעריכת מאפיינים) */
   geoSelection: { objectId: string; ids: string[] } | null;
   setGeoSelection(sel: { objectId: string; ids: string[] } | null): void;
+  /** תפריט מהיר עגול (כפתור הצד של העט / קליק ימני) – מיקום במסך, יחסית ללוח */
+  quickMenu: { x: number; y: number } | null;
+  setQuickMenu(pos: { x: number; y: number } | null): void;
   /** קלט ראשון שכבר נבחר לכלי הגיאומטריה (למשל מעגל מהסרגל הקופץ) */
   geoPrefill: string | null;
   setGeoPrefill(id: string | null): void;
@@ -373,6 +376,10 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
         set({ textEdit: null });
       },
 
+      quickMenu: null,
+      setQuickMenu(pos) {
+        set({ quickMenu: pos });
+      },
       geoLabelEdit: null,
       setGeoLabelEdit(edit) {
         set({ geoLabelEdit: edit });

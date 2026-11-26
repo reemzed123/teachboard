@@ -167,7 +167,11 @@ export class BoardEngine {
     this.on(h, 'pointerleave', () => this.currentHandler()?.hover?.(null));
     this.on(h, 'wheel', (e) => this.onWheel(e), { passive: false });
     // לחצן הצד של העט / קליק ימני לא פותח תפריט מעל הלוח.
-    this.on(h, 'contextmenu', (e) => e.preventDefault());
+    // לחצן הצד של העט / קליק ימני: תפריט מהיר עגול במקום העט
+    this.on(h, 'contextmenu', (e) => {
+      e.preventDefault();
+      this.openQuickMenu(e.clientX, e.clientY);
+    });
     this.on(window, 'keydown', (e) => this.onKey(e, true));
     this.on(window, 'keyup', (e) => this.onKey(e, false));
     // החלון איבד פוקוס (Alt+Tab, חלון אחר קפץ): העט/המגע עלולים לא לשלוח "הרמה" –
@@ -292,6 +296,11 @@ export class BoardEngine {
       return;
     }
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    // לחצן הצד של העט (עם החוד על הלוח) – תפריט מהיר, לא ציור
+    if (e.pointerType === 'pen' && e.button === 2) {
+      this.openQuickMenu(e.clientX, e.clientY);
+      return;
+    }
 
     // קצה המחק של העט מפעיל מחק זמנית.
     const penEraser = e.pointerType === 'pen' && (e.button === 5 || (e.buttons & 32) !== 0);
@@ -361,6 +370,12 @@ export class BoardEngine {
       if (cancelled) tool.cancel();
       else tool.up(this.sample(e, false));
     }
+  }
+
+  private openQuickMenu(clientX: number, clientY: number) {
+    if (this.activeTool) return; // באמצע קו – לא פותחים
+    const r = this.host.getBoundingClientRect();
+    this.store.getState().setQuickMenu({ x: clientX - r.left, y: clientY - r.top });
   }
 
   /** ביטול כל קלט שבתהליך (קו, גרירה, הזזת לוח, צביטה) */
