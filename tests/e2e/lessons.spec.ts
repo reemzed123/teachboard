@@ -234,7 +234,9 @@ test('notebook page can be portrait; PDF page is portrait A4', async ({ page }) 
   expect(Math.round(height)).toBe(842);
 });
 
-test('folders: create, rename, drag a lesson in, subfolder, move with menu, delete keeps lessons', async ({ page }) => {
+test('folders: create, rename, drag a lesson in, subfolder, move with menu, delete keeps lessons', async ({
+  page,
+}) => {
   await draw(page);
   await page.getByLabel('שם השיעור').fill('שברים');
   await page.getByLabel('שם השיעור').press('Enter');
@@ -249,7 +251,9 @@ test('folders: create, rename, drag a lesson in, subfolder, move with menu, dele
 
   // גרירת השיעור לתיקייה
   await page.locator('.tb-lesson-item', { hasText: 'שברים' }).dragTo(folder);
-  await expect(page.locator('.tb-lesson-item:not(.tb-folder-item)', { hasText: 'שברים' })).toHaveCount(0);
+  await expect(
+    page.locator('.tb-lesson-item:not(.tb-folder-item)', { hasText: 'שברים' }),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'פתיחת תיקייה: כיתה ז' }).click();
   await expect(page.getByRole('button', { name: 'פתיחה: שברים' })).toBeVisible();
 
@@ -257,23 +261,34 @@ test('folders: create, rename, drag a lesson in, subfolder, move with menu, dele
   await page.getByRole('button', { name: 'תיקייה חדשה' }).click();
   await page.getByRole('textbox', { name: 'שינוי שם' }).fill('חוברת');
   await page.getByRole('textbox', { name: 'שינוי שם' }).press('Enter');
-  await page.locator('.tb-lesson-item', { hasText: 'שברים' }).getByRole('button', { name: 'העברה אל…' }).click();
+  await page
+    .locator('.tb-lesson-item', { hasText: 'שברים' })
+    .getByRole('button', { name: 'העברה אל…' })
+    .click();
   await page.getByRole('dialog').getByRole('button', { name: 'חוברת' }).click();
   await page.getByRole('button', { name: 'פתיחת תיקייה: חוברת' }).click();
   await expect(page.getByRole('navigation', { name: 'מיקום' })).toContainText('כיתה ז');
   await expect(page.getByRole('button', { name: 'פתיחה: שברים' })).toBeVisible();
 
   // החיפוש מוצא שיעורים בכל התיקיות
-  await page.getByRole('navigation', { name: 'מיקום' }).getByRole('button', { name: 'כל השיעורים' }).click();
+  await page
+    .getByRole('navigation', { name: 'מיקום' })
+    .getByRole('button', { name: 'כל השיעורים' })
+    .click();
   await page.getByPlaceholder('חיפוש שיעור').fill('שבר');
   await expect(page.getByRole('button', { name: 'פתיחה: שברים' })).toBeVisible();
   await page.getByPlaceholder('חיפוש שיעור').fill('');
 
   // מחיקת "כיתה ז": השיעור לא נמחק
-  await page.locator('.tb-folder-item', { hasText: 'כיתה ז' }).getByRole('button', { name: 'מחיקת תיקייה' }).click();
+  await page
+    .locator('.tb-folder-item', { hasText: 'כיתה ז' })
+    .getByRole('button', { name: 'מחיקת תיקייה' })
+    .click();
   await page.getByRole('dialog').getByRole('button', { name: 'מחיקת התיקייה' }).click();
   await expect(page.getByRole('button', { name: 'פתיחת תיקייה: חוברת' })).toBeVisible();
-  const lessonsCount = await page.evaluate(() => (window as any).__tb.runtime.lessons.getState().lessons.length);
+  const lessonsCount = await page.evaluate(
+    () => (window as any).__tb.runtime.lessons.getState().lessons.length,
+  );
   expect(lessonsCount).toBe(1);
 
   // התיקיות נשמרות
