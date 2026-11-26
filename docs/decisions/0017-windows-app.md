@@ -15,7 +15,7 @@
 
 ## בנייה
 
-GitHub Actions (`.github/workflows/windows.yml`) על מחשב Windows: בכל שינוי ב-main – קובץ התקנה להורדה (30 יום); בתגית `v*` – Release קבוע. אין צורך בכלי פיתוח במחשב של הבעלים.
+GitHub Actions (`.github/workflows/windows.yml`) על מחשב Windows: בכל שינוי ב-main – קובץ התקנה להורדה (30 יום); כשנוצר Release ב-GitHub (למשל v0.9.0) – קובץ ההתקנה מצורף אליו אוטומטית. אין צורך בכלי פיתוח במחשב של הבעלים.
 
 ## עדכונים
 
