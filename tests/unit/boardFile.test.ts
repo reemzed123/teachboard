@@ -112,4 +112,40 @@ describe('.board file', () => {
     expect(out.assets).toHaveLength(0);
     expect(out.doc.pages[0]!.background.imageAssetId).toBeUndefined();
   });
+
+  it('keeps PDF pages and the original PDF file unchanged', () => {
+    const PDF = strToU8('%PDF-1.7\n% test\n%%EOF');
+    const PDF_ID = 'b'.repeat(64);
+    const doc = createEmptyDocument();
+    doc.pages[0]!.size = { width: 793, height: 1123 };
+    doc.pages[0]!.background = {
+      pattern: 'none',
+      color: '#ffffff',
+      spacing: 32,
+      pdf: { assetId: PDF_ID, page: 3 },
+    };
+    const out = unpackBoardFile(
+      packBoardFile(
+        { title: 'pdf', doc, assets: [{ id: PDF_ID, type: 'application/pdf', data: PDF }] },
+        '0.1',
+      ),
+    );
+    expect(out.doc.pages[0]!.background.pdf).toEqual({ assetId: PDF_ID, page: 3 });
+    expect(out.assets[0]!.type).toBe('application/pdf');
+    expect([...out.assets[0]!.data]).toEqual([...PDF]);
+  });
+
+  it('drops a PDF page reference when the PDF is missing', () => {
+    const doc = createEmptyDocument();
+    doc.pages[0]!.background = {
+      pattern: 'none',
+      color: '#ffffff',
+      spacing: 32,
+      pdf: { assetId: 'c'.repeat(64), page: 0 },
+    };
+    const out = unpackBoardFile(
+      zip({ 'manifest.json': manifest, 'document.json': JSON.stringify(doc) }),
+    );
+    expect(out.doc.pages[0]!.background.pdf).toBeUndefined();
+  });
 });

@@ -35,7 +35,8 @@ export function TemplatesPanel() {
         <p className="tb-help">{t('page.layout.help')}</p>
       </fieldset>
 
-      {page.layout === 'bounded' && (
+      {bg.pdf && <p className="tb-help">{t('page.pdfSize')}</p>}
+      {page.layout === 'bounded' && !bg.pdf && (
         <fieldset className="tb-field">
           <legend>{t('page.orientation')}</legend>
           <div

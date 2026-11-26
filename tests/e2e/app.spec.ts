@@ -113,11 +113,15 @@ test('phone-width screen has no horizontal scroll and panel fits', async ({ page
 });
 
 // ביצועים: הספריות הכבדות (נוסחאות, גיאומטריה) לא נטענות בפתיחת התוכנה – רק כשצריך
-test('heavy math/geometry libraries are not loaded at startup', async ({ page }) => {
+test('heavy math/geometry/PDF libraries are not loaded at startup', async ({ page }) => {
   const loaded: string[] = [];
   page.on('request', (r) => loaded.push(r.url()));
   await page.reload();
   await expect(page.getByTestId('save-status')).toHaveAttribute('data-status', 'saved');
   await page.waitForLoadState('networkidle');
-  expect(loaded.filter((u) => /\/(kernel|mathjax|mathlive)[^/]*\.js/.test(u))).toEqual([]);
+  expect(
+    loaded.filter((u) =>
+      /\/(kernel|mathjax|mathlive\.min|pdf|pdf\.worker\.min)-[^/]*\.m?js/.test(u),
+    ),
+  ).toEqual([]);
 });

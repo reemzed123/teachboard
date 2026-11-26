@@ -11,6 +11,7 @@ import {
   type ObjectId,
   type Page,
   type PageProps,
+  type PageBackground,
 } from '../../core/document/types';
 import type { SettingsStorage } from '../../platform/types';
 import { parseToolPrefs, type ToolId, type ToolPrefs } from './toolPrefs';
@@ -115,6 +116,13 @@ export function createPage(base?: Partial<PageProps>): Page {
     background: base?.background ?? { ...DEFAULT_BACKGROUND },
     objects: [],
   };
+}
+
+/** רקע לעמוד חדש "כמו הנוכחי" – בלי עמוד ה-PDF (עמוד חדש הוא דף ריק) */
+function blankBackground(bg: PageBackground): PageBackground {
+  const copy = structuredClone(bg);
+  delete copy.pdf;
+  return copy;
 }
 
 export function createEmptyDocument(): BoardDocument {
@@ -339,7 +347,7 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
         const page = createPage({
           layout: current.layout,
           size: current.size,
-          background: structuredClone(current.background),
+          background: blankBackground(current.background),
         });
         const index = s.doc.pages.indexOf(current) + 1;
         s.commit('addPage', [{ type: 'addPage', page, index }]);

@@ -103,7 +103,7 @@ test('lesson library: new lesson, rename, switch back', async ({ page }) => {
   await title.fill('שברים');
   await title.press('Enter');
   await page.getByRole('button', { name: 'ניהול שיעורים וקבצים' }).click();
-  await page.getByRole('button', { name: 'שיעור חדש' }).click();
+  await page.getByRole('button', { name: 'שיעור חדש', exact: true }).click();
   await expect(title).toHaveValue('שיעור ללא שם');
   await expect.poll(() => count(page)).toBe('0');
   await page.getByRole('button', { name: 'פתיחה: שברים' }).click();
@@ -129,7 +129,7 @@ test('save as .board, then open it as a new lesson', async ({ page }) => {
   const bytes = await readFile(path!);
   expect(bytes[0]).toBe(0x50); // ZIP
 
-  await page.getByRole('button', { name: 'שיעור חדש' }).click();
+  await page.getByRole('button', { name: 'שיעור חדש', exact: true }).click();
   await expect.poll(() => count(page)).toBe('0');
   const [chooser] = await Promise.all([
     page.waitForEvent('filechooser'),

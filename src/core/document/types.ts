@@ -226,6 +226,8 @@ export interface PageBackground {
   spacing: number;
   /** תמונת רקע (מזהה משאב בקובץ השיעור), אם נבחרה */
   imageAssetId?: string;
+  /** עמוד מקובץ PDF (המקור נשמר כמו שהוא; כותבים מעליו) */
+  pdf?: { assetId: string; page: number };
 }
 
 export interface Page {

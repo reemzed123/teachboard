@@ -83,6 +83,10 @@ function cleanBackground(v: unknown): PageBackground {
   if (typeof v.imageAssetId === 'string' && ASSET_ID.test(v.imageAssetId)) {
     bg.imageAssetId = v.imageAssetId;
   }
+  if (isObj(v.pdf) && typeof v.pdf.assetId === 'string' && ASSET_ID.test(v.pdf.assetId)) {
+    const page = num(v.pdf.page, 0, 100000);
+    if (page !== null) bg.pdf = { assetId: v.pdf.assetId, page: Math.floor(page) };
+  }
   return bg;
 }
 
@@ -470,6 +474,9 @@ export function validateDocument(raw: unknown, report?: ValidationReport): Board
 /** כל מזהי המשאבים (תמונות) שהמסמך משתמש בהם */
 export function referencedAssets(doc: BoardDocument): string[] {
   const ids = new Set<string>();
-  for (const p of doc.pages) if (p.background.imageAssetId) ids.add(p.background.imageAssetId);
+  for (const p of doc.pages) {
+    if (p.background.imageAssetId) ids.add(p.background.imageAssetId);
+    if (p.background.pdf) ids.add(p.background.pdf.assetId);
+  }
   return [...ids];
 }

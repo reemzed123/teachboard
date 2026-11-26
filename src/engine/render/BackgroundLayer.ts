@@ -6,6 +6,16 @@ import type { Page } from '../../core/document/types';
 /** מקור לתמונות רקע (נטענות מאחסון השיעור). */
 export interface ImageSource {
   getImage(assetId: string): CanvasImageSource | null;
+  /**
+   * עמוד PDF מצויר כתמונה. pixelScale = פיקסלים ליחידת לוח שרוצים (לחדות בהגדלה).
+   * מחזיר את הגרסה הטובה ביותר שכבר מוכנה, ומבקש גרסה חדה יותר ברקע אם צריך.
+   */
+  getPdfPage?(
+    assetId: string,
+    page: number,
+    pixelScale: number,
+    size: { width: number; height: number },
+  ): CanvasImageSource | null;
   /** הודעה כשתמונה סיימה להיטען (כדי לצייר מחדש) */
   onChange?(listener: () => void): () => void;
 }
@@ -67,6 +77,12 @@ export function drawPageBackground(
 
   if (bg.imageAssetId && images) {
     const img = images.getImage(bg.imageAssetId);
+    if (img) ctx.drawImage(img, 0, 0, page.size.width, page.size.height);
+  }
+
+  if (bg.pdf && images?.getPdfPage) {
+    const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
+    const img = images.getPdfPage(bg.pdf.assetId, bg.pdf.page, scale * dpr, page.size);
     if (img) ctx.drawImage(img, 0, 0, page.size.width, page.size.height);
   }
 

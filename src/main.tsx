@@ -6,7 +6,6 @@ import { createAppStore } from './app/store';
 import { RuntimeContext } from './app/StoreContext';
 import type { AppRuntime } from './app/runtime';
 import { createBoardStore } from './features/board/boardStore';
-import { referencedAssets } from './core/format/validate';
 import { prepareMath, thumbnailDataUrl } from './features/export/renderPage';
 import { AssetCache } from './features/lessons/assetCache';
 import { createLessonController } from './features/lessons/lessonController';
@@ -31,7 +30,7 @@ const lessons = createLessonController({
   defaultFolderName: t('folder.untitled'),
   copyTitle: (title) => t('lesson.copyOf', { title }),
   thumbnail: async (doc) => {
-    await assets.ensure(referencedAssets(doc));
+    await assets.preparePages([doc.pages[0]!], 1);
     await prepareMath([doc.pages[0]!]);
     return thumbnailDataUrl(doc.pages[0]!, assets);
   },

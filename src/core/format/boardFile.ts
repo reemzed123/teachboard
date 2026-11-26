@@ -5,7 +5,7 @@ import { FormatError, referencedAssets, validateDocument, type ValidationReport 
 // פורמט קובץ שיעור ‎.board – קובץ ZIP:
 //   manifest.json   – זיהוי הפורמט וגרסתו
 //   document.json   – השיעור (עמודים, אובייקטים, רקעים)
-//   assets/<sha256> – תמונות רקע (PNG/JPEG/WebP בלבד)
+//   assets/<sha256> – תמונות רקע (PNG/JPEG/WebP) וקובצי PDF מקוריים
 // מפרט מלא: docs/board-format.md
 
 export const BOARD_FORMAT_ID = 'teachboard';
@@ -20,6 +20,7 @@ export const FILE_LIMITS = {
   documentBytes: 200 * 1024 * 1024,
   entries: 2000,
   assetBytes: 20 * 1024 * 1024,
+  pdfBytes: 100 * 1024 * 1024,
 } as const;
 
 export interface BoardAsset {
@@ -43,9 +44,12 @@ interface Manifest {
 }
 
 const ASSET_PATH = /^assets\/([a-f0-9]{64})$/;
-const ALLOWED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
+const ALLOWED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'application/pdf']);
 
 function sniff(b: Uint8Array): string | null {
+  // ‎%PDF-
+  if (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 && b[4] === 0x2d)
+    return 'application/pdf';
   if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
   if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
   if (
@@ -110,7 +114,7 @@ export function unpackBoardFile(bytes: Uint8Array, report?: ValidationReport): B
           ASSET_PATH.test(file.name);
         if (!known) return false;
         const limit = file.name.startsWith('assets/')
-          ? FILE_LIMITS.assetBytes
+          ? FILE_LIMITS.pdfBytes
           : FILE_LIMITS.documentBytes;
         if (file.originalSize > limit) throw new FormatError('tooLarge', file.name);
         total += file.originalSize;
@@ -146,11 +150,14 @@ export function unpackBoardFile(bytes: Uint8Array, report?: ValidationReport): B
   for (const id of referencedAssets(doc)) {
     const data = files[`assets/${id}`];
     const type = data ? sniff(data) : null;
-    if (data && type) assets.push({ id, type, data });
+    const limit = type === 'application/pdf' ? FILE_LIMITS.pdfBytes : FILE_LIMITS.assetBytes;
+    if (data && type && data.length <= limit) assets.push({ id, type, data });
     else {
-      // תמונה חסרה/פגומה: מסירים את ההפניה, כדי שהעמוד ייפתח בלי התמונה
-      for (const p of doc.pages)
+      // משאב חסר/פגום: מסירים את ההפניה, כדי שהעמוד ייפתח בלעדיו
+      for (const p of doc.pages) {
         if (p.background.imageAssetId === id) delete p.background.imageAssetId;
+        if (p.background.pdf?.assetId === id) delete p.background.pdf;
+      }
     }
   }
 

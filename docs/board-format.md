@@ -10,11 +10,11 @@
 | ----------------- | ------------------------------------------------------------------------------------ |
 | `manifest.json`   | זיהוי: `format: "teachboard"`, `formatVersion: 1`, שם השיעור, גרסת התוכנה, זמן שמירה |
 | `document.json`   | המסמך: `{ version: 1, pages: [...] }`                                                |
-| `assets/<sha256>` | תמונות רקע. השם = טביעת SHA-256 של התוכן. PNG / JPEG / WebP בלבד                     |
+| `assets/<sha256>` | תמונות רקע (PNG / JPEG / WebP, עד 20MB) וקובצי PDF מקוריים (עד 100MB). השם = SHA-256 |
 
 ### document.json
 
-- `pages[]`: `id`, `layout` (`bounded` = עמוד מחברת, `infinite` = לוח אינסופי), `size {width,height}` (יחידות לוח; ברירת מחדל A4 לרוחב 1123×794), `background {pattern, color, spacing, imageAssetId?}`, `objects[]`.
+- `pages[]`: `id`, `layout` (`bounded` = עמוד מחברת, `infinite` = לוח אינסופי), `size {width,height}` (יחידות לוח; ברירת מחדל A4 לרוחב 1123×794), `background {pattern, color, spacing, imageAssetId?, pdf? {assetId, page}}` (`page` מתחיל ב-0), `objects[]`.
 - `objects[]` – שדות משותפים לכל סוג: `id`, `type`, `transform {x, y, rotation (מעלות), scale (אחיד)}`, `locked?`, `groupId?`.
   - `type: "ink"` – כתב יד: `style {kind: pen|highlighter, color, width, opacity}`, `points` (שלשות x,y,לחץ ביחס ל-transform), `pressure`.
   - `type: "shape"` – קו/חץ: `kind: line|arrow`, `dx, dy` (נקודת הסוף ביחס להתחלה), `style {color, width, opacity, dash: solid|dashed|dotted}`, `arrowStart?`.

@@ -30,7 +30,11 @@ export default defineConfig({
       },
       workbox: {
         // כל קובצי התוכנה, כולל הגופנים, נשמרים מראש במכשיר.
-        globPatterns: ['**/*.{js,css,html,woff2,png,svg,webmanifest}'],
+        globPatterns: [
+          '**/*.{js,mjs,css,html,woff2,png,svg,webmanifest}',
+          // מציג ה-PDF: גופנים, טבלאות תווים ופענוח תמונות – גם הם זמינים בלי אינטרנט
+          'pdfjs/**/*.{pfb,ttf,bcmap,icc,wasm}',
+        ],
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
       },

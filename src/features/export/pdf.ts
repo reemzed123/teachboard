@@ -5,6 +5,7 @@ import {
   PDFDocument,
   rgb,
   StandardFonts,
+  type PDFEmbeddedPage,
   type PDFImage,
   type PDFPage,
 } from 'pdf-lib';
@@ -34,6 +35,67 @@ const MAX_PT = 14000;
 export interface PdfAssets {
   /** בתים של תמונת רקע לפי מזהה, כבר כ-PNG או JPEG */
   get(assetId: string): Promise<{ type: 'image/png' | 'image/jpeg'; data: Uint8Array } | null>;
+  /** הבתים של קובץ PDF מקורי (לעמודי PDF) */
+  pdf?(assetId: string): Promise<Uint8Array | null>;
+  /** גיבוי: תמונת PNG חדה של רקע העמוד, כשאי אפשר להטמיע את ה-PDF (למשל קובץ מוצפן) */
+  pdfPageImage?(page: Page): Promise<Uint8Array | null>;
+}
+
+/** מטמון לייצוא אחד: תמונות, ומסמכי/עמודי PDF מקוריים */
+interface ExportCache {
+  images: Map<string, PDFImage>;
+  pdfDocs: Map<string, PDFDocument | null>;
+  pdfPages: Map<string, PDFEmbeddedPage | null>;
+}
+
+/** סיבוב העמוד המקורי (0/90/180/270) – PDF.js מציג אותו מסובב, ולכן גם בייצוא */
+function pdfRotation(cache: ExportCache, bg: { assetId: string; page: number }): number {
+  const src = cache.pdfDocs.get(bg.assetId);
+  if (!src || bg.page >= src.getPageCount()) return 0;
+  const r = src.getPage(bg.page).getRotation().angle;
+  return (((Math.round(r / 90) * 90) % 360) + 360) % 360;
+}
+
+/** מיקום עמוד מוטמע כך שאחרי סיבוב (עם כיוון השעון) הוא ממלא בדיוק את המלבן */
+export function rotatedPagePlacement(
+  rect: { x: number; y: number; width: number; height: number },
+  rotation: number,
+) {
+  const { x, y, width: w, height: h } = rect;
+  switch (rotation) {
+    case 90:
+      return { x, y: y + h, width: h, height: w, rotate: degrees(-90) };
+    case 180:
+      return { x: x + w, y: y + h, width: w, height: h, rotate: degrees(-180) };
+    case 270:
+      return { x: x + w, y, width: h, height: w, rotate: degrees(-270) };
+    default:
+      return rect;
+  }
+}
+
+/** מטמיע עמוד מה-PDF המקורי כמו שהוא (וקטורי – טקסט וקווים נשארים חדים) */
+async function embedPdfPage(
+  pdf: PDFDocument,
+  assets: PdfAssets,
+  cache: ExportCache,
+  assetId: string,
+  index: number,
+): Promise<PDFEmbeddedPage | null> {
+  const key = `${assetId}:${index}`;
+  if (cache.pdfPages.has(key)) return cache.pdfPages.get(key)!;
+  let src = cache.pdfDocs.get(assetId);
+  if (src === undefined) {
+    const bytes = await assets.pdf?.(assetId);
+    src = bytes ? await PDFDocument.load(bytes, { updateMetadata: false }).catch(() => null) : null;
+    cache.pdfDocs.set(assetId, src);
+  }
+  let embedded: PDFEmbeddedPage | null = null;
+  if (src && index < src.getPageCount()) {
+    embedded = await pdf.embedPage(src.getPage(index)).catch(() => null);
+  }
+  cache.pdfPages.set(key, embedded);
+  return embedded;
 }
 
 function parseColor(css: string): { color: ReturnType<typeof rgb>; opacity: number } {
@@ -55,12 +117,8 @@ function parseColor(css: string): { color: ReturnType<typeof rgb>; opacity: numb
   return { color: rgb(0, 0, 0), opacity: 1 };
 }
 
-async function addPage(
-  pdf: PDFDocument,
-  page: Page,
-  assets: PdfAssets,
-  imageCache: Map<string, PDFImage>,
-) {
+async function addPage(pdf: PDFDocument, page: Page, assets: PdfAssets, cache: ExportCache) {
+  const imageCache = cache.images;
   const area = exportArea(page);
   const k = Math.min(PX_TO_PT, MAX_PT / Math.max(area.width, area.height));
   const W = area.width * k;
@@ -90,6 +148,23 @@ async function addPage(
         width: page.size.width * k,
         height: page.size.height * k,
       });
+    }
+  }
+
+  // עמוד PDF מקורי – מוטמע כמו שהוא, ומעליו כל מה שנכתב
+  const pdfBg = page.background.pdf;
+  if (pdfBg) {
+    const embedded = await embedPdfPage(pdf, assets, cache, pdfBg.assetId, pdfBg.page);
+    const rect = {
+      x: X(0),
+      y: Y(page.size.height),
+      width: page.size.width * k,
+      height: page.size.height * k,
+    };
+    if (embedded) out.drawPage(embedded, rotatedPagePlacement(rect, pdfRotation(cache, pdfBg)));
+    else {
+      const png = await assets.pdfPageImage?.(page);
+      if (png) out.drawImage(await pdf.embedPng(png), rect);
     }
   }
 
@@ -261,7 +336,7 @@ export async function exportPdf(
   pdf.setTitle(title);
   pdf.setCreator('TeachBoard');
   pdf.setProducer('TeachBoard');
-  const cache = new Map<string, PDFImage>();
+  const cache: ExportCache = { images: new Map(), pdfDocs: new Map(), pdfPages: new Map() };
   for (const id of pageIds) {
     const page = doc.pages.find((p) => p.id === id);
     if (page) await addPage(pdf, page, assets, cache);

@@ -4,6 +4,7 @@ import { useRuntime } from '../app/StoreContext';
 import {
   exportPdfFile,
   exportPng,
+  importPdf,
   openBoardFile,
   saveBoardFile,
 } from '../features/lessons/fileActions';
@@ -70,6 +71,29 @@ export function FilesPanel() {
           </button>
         </div>
         <p className="tb-help">{t('files.boardHelp')}</p>
+      </section>
+
+      <section className="tb-field" aria-label={t('files.pdf')}>
+        <h3 className="tb-section-title">{t('files.pdf')}</h3>
+        <div className="tb-button-column">
+          <button
+            type="button"
+            className="tb-btn"
+            disabled={busy}
+            onClick={() => void run(() => importPdf(rt, 'new'))}
+          >
+            {t('files.openPdf')}
+          </button>
+          <button
+            type="button"
+            className="tb-btn"
+            disabled={busy}
+            onClick={() => void run(() => importPdf(rt, 'append'))}
+          >
+            {t('files.appendPdf')}
+          </button>
+        </div>
+        <p className="tb-help">{t('files.pdfHelp')}</p>
       </section>
 
       <section className="tb-field" aria-label={t('files.export')}>
