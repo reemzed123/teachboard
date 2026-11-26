@@ -6,6 +6,7 @@ import { currentPage } from '../features/board/boardStore';
 import { t } from '../i18n';
 import type { MessageKey } from '../i18n/he';
 import { SidePanel } from './SidePanel';
+import { GeoToolIcon } from './GeoToolIcon';
 
 const GROUPS: { key: MessageKey; tools: GeoToolId[] }[] = [
   {
@@ -67,7 +68,8 @@ export function GeometryPanel() {
                 onClick={() => pick(id)}
                 data-geo-tool={id}
               >
-                {t(`geo.tool.${id}` as MessageKey)}
+                <GeoToolIcon tool={id} />
+                <span>{t(`geo.tool.${id}` as MessageKey)}</span>
               </button>
             ))}
           </div>

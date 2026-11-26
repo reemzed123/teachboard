@@ -1208,8 +1208,12 @@ input[type='range'] {
 }
 
 .tb-geo-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   min-height: 36px;
-  padding: 4px;
+  padding: 6px 4px 5px;
   border: 1px solid var(--tb-border);
   border-radius: 8px;
   background: var(--tb-surface);
@@ -1227,6 +1231,10 @@ input[type='range'] {
   background: var(--tb-accent-soft);
   color: var(--tb-accent);
   font-weight: 600;
+}
+
+.tb-geo-icon {
+  flex: none;
 }
 
 .tb-geo-hint {
