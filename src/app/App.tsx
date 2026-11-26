@@ -14,6 +14,8 @@ import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { t } from '../i18n';
 import { MathPanel } from '../ui/MathPanel';
 import { GeometryPanel } from '../ui/GeometryPanel';
+import { TeachingPanel } from '../ui/TeachingPanel';
+import { PdfPanel } from '../ui/PdfPanel';
 import { FormulaDialog } from '../ui/FormulaDialog';
 import { handleShortcut } from './shortcuts';
 import { useApp, useRuntime } from './StoreContext';
@@ -60,7 +62,10 @@ export function App() {
         if (document.querySelector('dialog[open]')) return;
         const board = rt.board.getState();
         const s = rt.app.getState();
+        const teach = rt.teaching.getState();
         if (board.selection.length > 0) board.setSelection([]);
+        else if (teach.spotlight.on) teach.toggleSpotlight(false);
+        else if (teach.cover.on) teach.toggleCover(false);
         else if (s.focusMode) s.setFocusMode(false);
         else if (s.openPanel) s.closePanel();
         return;
@@ -87,6 +92,8 @@ export function App() {
             {category?.id === 'files' && <FilesPanel />}
             {category?.id === 'math' && <MathPanel />}
             {category?.id === 'geometry' && <GeometryPanel />}
+            {category?.id === 'teaching' && <TeachingPanel />}
+            {category?.id === 'pdf' && <PdfPanel />}
             {category && !category.available && <CategoryPanel category={category} />}
           </ErrorBoundary>
         )}

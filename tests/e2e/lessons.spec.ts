@@ -250,6 +250,7 @@ test('folders: create, rename, drag a lesson in, subfolder, move with menu, dele
   await expect(folder).toBeVisible();
 
   // גרירת השיעור לתיקייה
+  await folder.scrollIntoViewIfNeeded();
   await page.locator('.tb-lesson-item', { hasText: 'שברים' }).dragTo(folder);
   await expect(
     page.locator('.tb-lesson-item:not(.tb-folder-item)', { hasText: 'שברים' }),

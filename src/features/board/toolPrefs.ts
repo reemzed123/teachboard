@@ -14,7 +14,16 @@ const GEO_TOOL_IDS = Object.keys(TOOL_SLOTS);
 // העדפות הכלים (צבע, עובי וכו') – נזכרות בין פתיחות של התוכנה.
 
 export type ToolId =
-  'select' | 'pen' | 'highlighter' | 'eraser' | 'hand' | 'text' | 'line' | 'arrow' | 'geometry';
+  | 'select'
+  | 'pen'
+  | 'highlighter'
+  | 'eraser'
+  | 'hand'
+  | 'text'
+  | 'line'
+  | 'arrow'
+  | 'geometry'
+  | 'laser';
 export type EraserMode = 'stroke' | 'area';
 
 export interface ToolPrefs {

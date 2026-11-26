@@ -18,6 +18,7 @@ import { InkTool } from './tools/InkTool';
 import { SelectTool } from './tools/SelectTool';
 import { ShapeTool } from './tools/ShapeTool';
 import { TextTool } from './tools/TextTool';
+import { LaserTool } from './tools/LaserTool';
 import { GeometryTool } from './tools/GeometryTool';
 import type { InputPoint, PointerSample, ToolContext, ToolHandler } from './tools/types';
 import { fitRect, screenToBoard, visibleBoardRect, zoomAt } from './viewport';
@@ -125,6 +126,7 @@ export class BoardEngine {
       arrow: new ShapeTool(ctx, 'arrow'),
       text: new TextTool(ctx),
       geometry: new GeometryTool(ctx),
+      laser: new LaserTool(ctx),
     };
 
     this.view = store.getState().view;
@@ -542,7 +544,9 @@ export class BoardEngine {
               ? 'default'
               : tool === 'text'
                 ? 'text'
-                : 'crosshair'));
+                : tool === 'laser'
+                  ? 'none'
+                  : 'crosshair'));
   }
 
   // ---------- פעולות חיצוניות (כפתורי זום) ----------

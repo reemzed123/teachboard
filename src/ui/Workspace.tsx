@@ -10,6 +10,9 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { SelectionToolbar } from './SelectionToolbar';
 import { TextEditor } from './TextEditor';
 import { ZoomControls } from './ZoomControls';
+import { Spotlight } from './teaching/Spotlight';
+import { Cover } from './teaching/Cover';
+import { ClockWidget } from './teaching/ClockWidget';
 
 export function Workspace() {
   const rt = useRuntime();
@@ -55,6 +58,11 @@ export function Workspace() {
   return (
     <main className="tb-workspace" aria-label={t('workspace.label')}>
       <div ref={hostRef} className="tb-board" data-testid="board" />
+      <ErrorBoundary fallback={() => null}>
+        <Cover />
+        <Spotlight />
+        <ClockWidget />
+      </ErrorBoundary>
       <ErrorBoundary fallback={() => null}>
         <TextEditor />
       </ErrorBoundary>

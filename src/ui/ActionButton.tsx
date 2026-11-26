@@ -1,6 +1,6 @@
 import { actionTooltip, ACTIONS } from '../app/actions';
 import type { QuickActionId } from '../app/actionIds';
-import { useApp, useBoard, useRuntime } from '../app/StoreContext';
+import { useApp, useBoard, useRuntime, useTeaching } from '../app/StoreContext';
 import { t } from '../i18n';
 import { IconButton } from './IconButton';
 
@@ -21,6 +21,9 @@ export function ActionButton({
   useBoard((s) => s.clipboard);
   useBoard((s) => s.doc);
   useApp((s) => s.categoryBarVisible);
+  useTeaching((s) => s.spotlight.on);
+  useTeaching((s) => s.cover.on);
+  useTeaching((s) => s.clock?.mode);
   const enabled = action.isEnabled ? action.isEnabled(rt) : true;
 
   return (

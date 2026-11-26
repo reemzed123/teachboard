@@ -29,6 +29,8 @@ async function draw(page: Page, y = 300) {
 }
 
 async function openPdf(page: Page, buttonName: string, buffer: Buffer) {
+  if (!(await page.getByRole('button', { name: buttonName }).isVisible()))
+    await page.getByRole('button', { name: 'PDF ומסמכים' }).click();
   const [chooser] = await Promise.all([
     page.waitForEvent('filechooser'),
     page.getByRole('button', { name: buttonName }).click(),
@@ -144,6 +146,7 @@ test('add PDF pages after the current page; undo removes them; .board keeps the 
   await expect.poll(async () => (await pagesInfo(page)).length).toBe(3);
 
   // שמירה כקובץ שיעור ופתיחה מחדש – עמודי ה-PDF נשמרים
+  await filesPanel(page);
   const [saved] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: 'שמירה כקובץ שיעור' }).click(),

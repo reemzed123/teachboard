@@ -16,6 +16,7 @@ import { setLocale } from './i18n';
 import { createWebSettingsStorage } from './platform/web/settingsStorage';
 import { UpdatePrompt } from './ui/UpdatePrompt';
 import { ErrorBoundary } from './ui/ErrorBoundary';
+import { createTeachingStore } from './features/teaching/teachingStore';
 import './styles/global.css';
 
 setLocale('he');
@@ -41,6 +42,7 @@ const runtime: AppRuntime = {
   lessons,
   repo,
   assets,
+  teaching: createTeachingStore(),
   engine: null,
 };
 

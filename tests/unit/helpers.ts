@@ -4,6 +4,7 @@ import { AssetCache } from '../../src/features/lessons/assetCache';
 import { createLessonController } from '../../src/features/lessons/lessonController';
 import { createWebLessonRepository } from '../../src/platform/web/lessonRepository';
 import type { AppRuntime } from '../../src/app/runtime';
+import { createTeachingStore } from '../../src/features/teaching/teachingStore';
 import { createBoardStore } from '../../src/features/board/boardStore';
 import type { SettingsStorage } from '../../src/platform/types';
 
@@ -30,6 +31,7 @@ export function createTestRuntime(settings: unknown = null): AppRuntime {
     board,
     repo,
     assets: new AssetCache(repo),
+    teaching: createTeachingStore(),
     lessons: createLessonController({
       repo,
       board,

@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import { useStore } from 'zustand';
 import type { BoardState } from '../features/board/boardStore';
+import type { TeachingState } from '../features/teaching/teachingStore';
 import type { AppRuntime } from './runtime';
 import type { AppState, AppStore } from './store';
 
@@ -22,4 +23,8 @@ export function useApp<T>(selector: (state: AppState) => T): T {
 
 export function useBoard<T>(selector: (state: BoardState) => T): T {
   return useStore(useRuntime().board, selector);
+}
+
+export function useTeaching<T>(selector: (state: TeachingState) => T): T {
+  return useStore(useRuntime().teaching, selector);
 }

@@ -1,6 +1,11 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   ArrowUpRight,
+  Crosshair,
+  Eye,
+  Square,
+  Timer,
+  Watch,
   BringToFront,
   ClipboardPaste,
   Copy,
@@ -106,6 +111,43 @@ export const ACTIONS: Record<QuickActionId, ActionDef> = {
   'tool.line': toolAction('tool.line', 'line', 'tool.line', Minus, 'L'),
   'tool.arrow': toolAction('tool.arrow', 'arrow', 'tool.arrow', ArrowUpRight, 'A'),
   'tool.geometry': toolAction('tool.geometry', 'geometry', 'tool.geometry', Triangle, 'G'),
+  'tool.laser': toolAction('tool.laser', 'laser', 'tool.laser', Crosshair, 'K'),
+  'teaching.spotlight': {
+    id: 'teaching.spotlight',
+    labelKey: 'action.spotlight',
+    icon: Eye,
+    run: (rt) => rt.teaching.getState().toggleSpotlight(),
+    isActive: (rt) => rt.teaching.getState().spotlight.on,
+  },
+  'teaching.cover': {
+    id: 'teaching.cover',
+    labelKey: 'action.cover',
+    icon: Square,
+    run: (rt) => rt.teaching.getState().toggleCover(),
+    isActive: (rt) => rt.teaching.getState().cover.on,
+  },
+  'teaching.timer': {
+    id: 'teaching.timer',
+    labelKey: 'action.timer',
+    icon: Timer,
+    run: (rt) => {
+      const s = rt.teaching.getState();
+      if (s.clock?.mode === 'timer') s.closeClock();
+      else s.openClock('timer');
+    },
+    isActive: (rt) => rt.teaching.getState().clock?.mode === 'timer',
+  },
+  'teaching.stopwatch': {
+    id: 'teaching.stopwatch',
+    labelKey: 'action.stopwatch',
+    icon: Watch,
+    run: (rt) => {
+      const s = rt.teaching.getState();
+      if (s.clock?.mode === 'stopwatch') s.closeClock();
+      else s.openClock('stopwatch');
+    },
+    isActive: (rt) => rt.teaching.getState().clock?.mode === 'stopwatch',
+  },
   'edit.duplicate': selectionAction('edit.duplicate', CopyPlus, 'Ctrl+D', (s) =>
     s.duplicateSelection(),
   ),

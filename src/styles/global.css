@@ -1507,3 +1507,247 @@ input:focus-visible {
   display: flex;
   justify-content: space-between;
 }
+
+/* ---------- כלי הוראה ---------- */
+
+.tb-segmented-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tb-btn-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.tb-btn-tool[aria-pressed='true'] {
+  border-color: var(--tb-accent);
+  background: var(--tb-accent-soft);
+  color: var(--tb-accent);
+}
+
+/* זרקור: חושך מסביב לעיגול מואר. לא חוסם לחיצות. */
+.tb-spotlight {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  background: radial-gradient(
+    circle var(--tb-spot-r, 150px) at var(--tb-spot-x, 50%) var(--tb-spot-y, 50%),
+    transparent 0,
+    transparent calc(100% - 3px),
+    rgb(8 12 20 / 0.82) 100%
+  );
+}
+
+/* כיסוי וחשיפה */
+.tb-cover {
+  position: absolute;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    repeating-linear-gradient(135deg, transparent 0 14px, rgb(255 255 255 / 0.05) 14px 28px),
+    #3d4654;
+  color: #e6e9ee;
+  touch-action: none;
+  transition: none;
+}
+
+.tb-cover[data-side='top'] {
+  top: 0;
+  inset-inline: 0;
+}
+.tb-cover[data-side='bottom'] {
+  bottom: 0;
+  inset-inline: 0;
+}
+.tb-cover[data-side='left'] {
+  left: 0;
+  inset-block: 0;
+}
+.tb-cover[data-side='right'] {
+  right: 0;
+  inset-block: 0;
+}
+
+.tb-cover-text {
+  font-size: 15px;
+  opacity: 0.8;
+  pointer-events: none;
+  padding: 8px;
+  text-align: center;
+}
+
+.tb-cover-handle {
+  position: absolute;
+  border: none;
+  background: #f5b301;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 0.25);
+  border-radius: 999px;
+  touch-action: none;
+}
+
+.tb-cover[data-side='top'] .tb-cover-handle,
+.tb-cover[data-side='bottom'] .tb-cover-handle {
+  left: 50%;
+  width: 120px;
+  height: 18px;
+  margin-left: -60px;
+  cursor: ns-resize;
+}
+.tb-cover[data-side='top'] .tb-cover-handle {
+  bottom: -9px;
+}
+.tb-cover[data-side='bottom'] .tb-cover-handle {
+  top: -9px;
+}
+.tb-cover[data-side='left'] .tb-cover-handle,
+.tb-cover[data-side='right'] .tb-cover-handle {
+  top: 50%;
+  width: 18px;
+  height: 120px;
+  margin-top: -60px;
+  cursor: ew-resize;
+}
+.tb-cover[data-side='left'] .tb-cover-handle {
+  right: -9px;
+}
+.tb-cover[data-side='right'] .tb-cover-handle {
+  left: -9px;
+}
+
+.tb-cover-close {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.12);
+  color: inherit;
+  cursor: pointer;
+}
+
+.tb-cover-close:hover {
+  background: rgb(255 255 255 / 0.22);
+}
+
+/* טיימר / שעון עצר */
+.tb-clock {
+  position: absolute;
+  top: 16px;
+  inset-inline-end: 16px;
+  z-index: 40;
+  min-width: 210px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius);
+  background: var(--tb-surface);
+  color: var(--tb-text);
+  box-shadow: var(--tb-shadow);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.tb-clock-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--tb-text-muted, inherit);
+}
+
+.tb-clock-head span {
+  flex: 1;
+}
+
+.tb-clock-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.tb-clock-icon:hover {
+  background: var(--tb-accent-soft);
+}
+
+.tb-clock-time {
+  margin: 4px 0 8px;
+  font-size: 44px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.tb-clock[data-finished] {
+  animation: tb-clock-flash 0.8s ease-in-out 4;
+  border-color: var(--tb-danger);
+}
+
+.tb-clock[data-finished] .tb-clock-time {
+  color: var(--tb-danger);
+  font-size: 30px;
+}
+
+@keyframes tb-clock-flash {
+  50% {
+    background: color-mix(in srgb, var(--tb-danger) 22%, var(--tb-surface));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tb-clock[data-finished] {
+    animation: none;
+  }
+}
+
+.tb-clock-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.tb-clock-presets button {
+  min-height: 30px;
+  border: 1px solid var(--tb-border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tb-clock-presets button[aria-pressed='true'] {
+  border-color: var(--tb-accent);
+  background: var(--tb-accent-soft);
+  color: var(--tb-accent);
+}
+
+.tb-clock-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.tb-clock-controls .tb-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
