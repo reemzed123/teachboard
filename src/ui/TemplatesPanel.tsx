@@ -35,6 +35,37 @@ export function TemplatesPanel() {
         <p className="tb-help">{t('page.layout.help')}</p>
       </fieldset>
 
+      {page.layout === 'bounded' && (
+        <fieldset className="tb-field">
+          <legend>{t('page.orientation')}</legend>
+          <div
+            className="tb-segmented tb-segmented-2"
+            role="radiogroup"
+            aria-label={t('page.orientation')}
+          >
+            {(['landscape', 'portrait'] as const).map((o) => {
+              const portrait = page.size.height > page.size.width;
+              const checked = o === 'portrait' ? portrait : !portrait;
+              return (
+                <button
+                  key={o}
+                  type="button"
+                  role="radio"
+                  aria-checked={checked}
+                  onClick={() => {
+                    if (checked) return;
+                    // מחליפים רוחב וגובה – התוכן לא זז ולא נמחק
+                    setProps({ size: { width: page.size.height, height: page.size.width } });
+                  }}
+                >
+                  {t(`page.orientation.${o}`)}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
+
       <fieldset className="tb-field">
         <legend>{t('page.pattern')}</legend>
         <div className="tb-pattern-grid" role="radiogroup" aria-label={t('page.pattern')}>

@@ -128,3 +128,35 @@ test('math objects are saved and exported to PDF', async ({ page }) => {
   const doc = await PDFDocument.load(await readFile((await pdf.path())!));
   expect(doc.getPageCount()).toBe(1);
 });
+
+test('function names f(x), g(x); enlarging the graph frame widens the range (numbers not stretched)', async ({
+  page,
+}) => {
+  await newGraphWith(page, 'x', '2x');
+  await expect(page.getByText('f(x) =', { exact: true })).toBeVisible();
+  await expect(page.getByText('g(x) =', { exact: true })).toBeVisible();
+  const before = (await objects(page))[0]!;
+  // גרירת הפינה הימנית-התחתונה של המסגרת
+  const sb = await page.evaluate(() => (window as any).__tb.selectionScreenBounds());
+  const box = (await page.getByTestId('board').boundingBox())!;
+  const cx = box.x + sb.x + sb.width + 6;
+  const cy = box.y + sb.y + sb.height + 6;
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 120, cy + 90, { steps: 8 });
+  await page.mouse.up();
+  const after = (await objects(page))[0]!;
+  expect(after.width).toBeGreaterThan(before.width);
+  expect(after.transform.scale).toBe(1);
+  const unit = (o: any) => o.width / (o.range.xMax - o.range.xMin);
+  expect(unit(after)).toBeCloseTo(unit(before), 6);
+  expect(after.range.xMax - after.range.xMin).toBeGreaterThan(
+    before.range.xMax - before.range.xMin,
+  );
+
+  // ניווט: התקרבות (החלונית נסגרה אוטומטית כשגררנו על הלוח – פותחים שוב)
+  await page.getByRole('button', { name: 'מתמטיקה' }).click();
+  await page.getByRole('button', { name: 'התקרבות' }).click();
+  const zoomed = (await objects(page))[0]!;
+  expect(zoomed.range.xMax - zoomed.range.xMin).toBeLessThan(after.range.xMax - after.range.xMin);
+});

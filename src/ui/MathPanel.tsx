@@ -1,4 +1,15 @@
-import { Eye, EyeOff, Trash2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  Crosshair,
+  Eye,
+  EyeOff,
+  Trash2,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { newId } from '../core/document/ids';
 import {
@@ -8,6 +19,7 @@ import {
   type TableObject,
 } from '../core/document/types';
 import { formatNumber, valueTable } from '../core/math/numeric';
+import { defaultRange, functionName, panGraph, zoomGraph } from '../core/math/graphView';
 import { useBoard, useRuntime } from '../app/StoreContext';
 import { currentPage } from '../features/board/boardStore';
 import { loadMathLive } from '../features/math/mathlive';
@@ -43,7 +55,7 @@ export function MathPanel() {
       },
       width,
       height,
-      range: { xMin: -8, xMax: 8, yMin: -6, yMax: 6 },
+      range: defaultRange(width, height),
       grid: true,
       showIntercepts: true,
       showIntersections: true,
@@ -154,6 +166,51 @@ function GraphEditor({ graph }: { graph: GraphObject }) {
 
       <fieldset className="tb-field">
         <legend>{t('math.range')}</legend>
+        <p className="tb-help">{t('math.rangeHelp')}</p>
+        <div className="tb-graph-nav" role="toolbar" aria-label={t('math.navigate')}>
+          <IconButton
+            icon={ZoomIn}
+            label={t('math.zoomIn')}
+            tooltipSide="below"
+            onClick={() => update((g) => ({ range: zoomGraph(g, 0.8) }))}
+          />
+          <IconButton
+            icon={ZoomOut}
+            label={t('math.zoomOut')}
+            tooltipSide="below"
+            onClick={() => update((g) => ({ range: zoomGraph(g, 1.25) }))}
+          />
+          <IconButton
+            icon={ArrowRight}
+            label={t('math.panRight')}
+            tooltipSide="below"
+            onClick={() => update((g) => ({ range: panGraph(g, 0.2, 0) }))}
+          />
+          <IconButton
+            icon={ArrowLeft}
+            label={t('math.panLeft')}
+            tooltipSide="below"
+            onClick={() => update((g) => ({ range: panGraph(g, -0.2, 0) }))}
+          />
+          <IconButton
+            icon={ArrowUp}
+            label={t('math.panUp')}
+            tooltipSide="below"
+            onClick={() => update((g) => ({ range: panGraph(g, 0, 0.2) }))}
+          />
+          <IconButton
+            icon={ArrowDown}
+            label={t('math.panDown')}
+            tooltipSide="below"
+            onClick={() => update((g) => ({ range: panGraph(g, 0, -0.2) }))}
+          />
+          <IconButton
+            icon={Crosshair}
+            label={t('math.resetView')}
+            tooltipSide="below"
+            onClick={() => update((g) => ({ range: defaultRange(g.width, g.height) }))}
+          />
+        </div>
         <div className="tb-range-grid" dir="ltr">
           {(['xMin', 'xMax', 'yMin', 'yMax'] as const).map((k) => (
             <label key={k} className="tb-range-cell">
@@ -248,7 +305,7 @@ function FunctionRow({
         />
       </label>
       <span className="tb-fn-label" dir="ltr">
-        y =
+        {functionName(index)}(x) =
       </span>
       <div className="tb-fn-field" dir="ltr">
         {ready ? (
@@ -362,9 +419,9 @@ function ValueTable({ graph }: { graph: GraphObject }) {
         <label className="tb-select-inline">
           {t('math.tableFunction')}
           <select value={fn?.id} onChange={(e) => setFnId(e.target.value)} dir="ltr">
-            {usable.map((f, i) => (
+            {usable.map((f) => (
               <option key={f.id} value={f.id}>
-                {`${i + 1}: ${f.latex}`}
+                {`${functionName(graph.functions.indexOf(f))}(x) = ${f.latex}`}
               </option>
             ))}
           </select>

@@ -208,3 +208,28 @@ test('side panel closes automatically when starting to write (and the setting ca
   await draw(page, 350);
   await expect(page.getByRole('complementary', { name: 'הגדרות' })).toBeVisible();
 });
+
+test('notebook page can be portrait; PDF page is portrait A4', async ({ page }) => {
+  await page.getByRole('button', { name: 'תבניות ורקעים' }).click();
+  await page.getByRole('radio', { name: 'לאורך' }).click();
+  const size = await page.evaluate(
+    () => (window as any).__tb.runtime.board.getState().doc.pages[0].size,
+  );
+  expect(size).toEqual({ width: 794, height: 1123 });
+  // עמוד חדש מקבל את אותו כיוון
+  await page.locator('[data-action="page.add"]').click();
+  const size2 = await page.evaluate(
+    () => (window as any).__tb.runtime.board.getState().doc.pages[1].size,
+  );
+  expect(size2).toEqual({ width: 794, height: 1123 });
+
+  await page.getByRole('button', { name: 'ניהול שיעורים וקבצים' }).click();
+  const [pdf] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'PDF של העמוד' }).click(),
+  ]);
+  const doc = await PDFDocument.load(await readFile((await pdf.path())!));
+  const { width, height } = doc.getPage(0).getSize();
+  expect(Math.round(width)).toBe(596);
+  expect(Math.round(height)).toBe(842);
+});

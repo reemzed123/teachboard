@@ -8,6 +8,7 @@ import {
 } from '../../core/geometry/rect';
 import { transformAround } from '../../core/geometry/transform';
 import { expandGroups } from '../../core/objects/edit';
+import { resizeGraph } from '../../core/math/graphView';
 import { objectBounds, objectHitsPoint, objectIntersectsRect } from '../../core/objects/geometry';
 import { currentPage, type ViewState } from '../../features/board/boardStore';
 import { boardToScreen } from '../viewport';
@@ -77,6 +78,10 @@ export class SelectTool implements ToolHandler {
       }));
     }
     if (m.kind === 'scale') {
+      // גרף בודד: הגדלת המסגרת מרחיבה את התחום (המספרים והקווים לא נמתחים)
+      if (this.originals.length === 1 && this.originals[0]!.type === 'graph') {
+        return [resizeGraph(this.originals[0]!, m.pivot, m.k)];
+      }
       return this.originals.map((o) => ({
         ...o,
         transform: transformAround(o.transform, m.pivot, 0, m.k),

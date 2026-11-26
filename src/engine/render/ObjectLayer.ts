@@ -7,6 +7,8 @@ import { drawObjectLocal, objectBlend, objectOpacity } from './drawObject';
 
 interface Entry {
   obj: BoardObject;
+  /** גרסה זמנית בזמן גרירה (למשל גרף שמסגרתו גדלה) – מצוירת במקום obj */
+  preview?: BoardObject;
   node: Konva.Shape;
   bounds: Rect;
 }
@@ -33,7 +35,8 @@ export class ObjectLayer {
       listening: false,
       perfectDrawEnabled: false,
       sceneFunc: (ctx) => {
-        const current = this.entries.get(obj.id)?.obj ?? obj;
+        const e = this.entries.get(obj.id);
+        const current = e?.preview ?? e?.obj ?? obj;
         drawObjectLocal(ctx._context, current);
       },
     });
@@ -76,6 +79,7 @@ export class ObjectLayer {
         appended.push(e);
       } else if (entry.obj !== obj) {
         entry.obj = obj;
+        entry.preview = undefined;
         entry.bounds = objectBounds(obj);
         this.applyAttrs(entry.node, obj);
         changedExisting = true;
@@ -131,7 +135,9 @@ export class ObjectLayer {
   previewTransforms(objects: readonly BoardObject[]): void {
     for (const o of objects) {
       const e = this.entries.get(o.id);
-      if (e) this.applyAttrs(e.node, o);
+      if (!e) continue;
+      e.preview = o;
+      this.applyAttrs(e.node, o);
     }
     this.layer.batchDraw();
   }
@@ -140,7 +146,9 @@ export class ObjectLayer {
   resetPreview(ids: readonly ObjectId[]): void {
     for (const id of ids) {
       const e = this.entries.get(id);
-      if (e) this.applyAttrs(e.node, e.obj);
+      if (!e) continue;
+      e.preview = undefined;
+      this.applyAttrs(e.node, e.obj);
     }
     this.layer.batchDraw();
   }
