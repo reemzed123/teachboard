@@ -249,20 +249,29 @@ test('polygon decorations: medians and angles on a triangle, turned on and off',
   expect(Object.values(sol).filter((e: any) => e.kind === 'midpoint')).toHaveLength(0);
 });
 
-test('central and inscribed angles on a circle; algebraic label for an angle', async ({ page }) => {
+test('circle popup bar: central and inscribed angles, tangent; algebraic label for an angle', async ({
+  page,
+}) => {
   await tool(page, 'circle');
   await click(page, 400, 350);
   await click(page, 550, 350);
-  await tool(page, 'centralAngle');
+  // הכלים של המעגל לא בחלונית – הם בסרגל שקופץ כשבוחרים מעגל
+  await expect(page.locator('[data-geo-tool="centralAngle"]')).toHaveCount(0);
+  await tool(page, 'move');
   await click(page, 400, 200); // המעגל (למעלה)
+  const bar = page.getByTestId('geo-circle-bar');
+  await expect(bar).toBeVisible();
+  await bar.locator('[data-circle-tool="centralAngle"]').click();
+  await expect(page.getByTestId('geo-hint')).toContainText('שתי נקודות על המעגל');
   await click(page, 250, 350); // נקודה על המעגל
   await click(page, 400, 500); // נקודה על המעגל
   let sol = await solution(page);
   const central = Object.values(sol).find((e: any) => e.kind === 'angle') as any;
   expect(central.deg).toBeCloseTo(90, 0);
+  // בסיום חוזרים לבחירה והמעגל נשאר מסומן – הסרגל שוב זמין
+  await expect(bar).toBeVisible();
 
-  await tool(page, 'inscribedAngle');
-  await click(page, 506, 244); // המעגל
+  await bar.locator('[data-circle-tool="inscribedAngle"]').click();
   await click(page, 506, 244); // קודקוד על המעגל
   await click(page, 250, 350); // נקודה קיימת C
   await click(page, 400, 500); // נקודה קיימת D
@@ -272,8 +281,13 @@ test('central and inscribed angles on a circle; algebraic label for an angle', a
   // זווית היקפית = חצי מהמרכזית הנשענת על אותה קשת
   expect(angles[1].deg).toBeCloseTo(45, 0);
 
+  // משיק מנקודה חיצונית: שני ישרים
+  await bar.locator('[data-circle-tool="tangent"]').click();
+  await click(page, 700, 350);
+  sol = await solution(page);
+  expect(Object.values(sol).filter((e: any) => e.kind === 'line')).toHaveLength(2);
+
   // ביטוי אלגברי לזווית
-  await tool(page, 'move');
   const s = await page.evaluate(() => {
     const st = (window as any).__tb.runtime.board.getState();
     const g = st.doc.pages

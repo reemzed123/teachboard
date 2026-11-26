@@ -69,7 +69,10 @@ export const TOOL_SLOTS: Record<GeoToolId, Slot[][]> = {
   angleBisector: [['P', 'P', 'P']],
   median: [['P', 'S']],
   altitude: [['P', 'L']],
-  tangent: [['P', 'C']],
+  tangent: [
+    ['P', 'C'],
+    ['C', 'P'],
+  ],
   angle: [['P', 'P', 'P']],
   length: [['S'], ['C']],
   area: [['G']],
@@ -93,6 +96,17 @@ export interface BuildContext {
   /** מיקום נקודה (לבניית הצורה סביב הנקודה שנלחצה) */
   posOf?(id: string): { x: number; y: number } | undefined;
 }
+
+const CIRCLE_KINDS: ReadonlySet<GeoKind> = new Set(['circle', 'circleR', 'circle3', 'arc']);
+
+/** כלי המעגל – מופיעים בסרגל שקופץ כשבוחרים מעגל */
+export const CIRCLE_TOOLS: readonly GeoToolId[] = [
+  'radius',
+  'chord',
+  'centralAngle',
+  'inscribedAngle',
+  'tangent',
+];
 
 /** הכלים שבהם נקודה חדשה נוצרת על המעגל שנבחר ראשון */
 export const ON_CIRCLE_TOOLS: ReadonlySet<GeoToolId> = new Set([
@@ -264,16 +278,26 @@ export function buildStep(tool: GeoToolId, inputs: string[], ctx: BuildContext):
       break;
     }
     case 'tangent': {
-      // משיק מנקודה חיצונית: חיתוך המעגל עם מעגל שהקוטר שלו הוא הקטע מהנקודה למרכז
-      const center = ctx.parentsOf(b)[0];
+      // הקלטים: נקודה ומעגל (בכל סדר)
+      const circleFirst = CIRCLE_KINDS.has(ctx.kindOf(a) ?? 'point');
+      const pt = circleFirst ? b : a;
+      const circ = circleFirst ? a : b;
+      const center = centerOf(circ);
       if (!center) break;
+      // נקודה על המעגל: משיק אחד – אנך לרדיוס בנקודה
+      if (ctx.kindOf(pt) === 'glider' && ctx.parentsOf(pt)[0] === circ) {
+        const radius = mk('segment', [center, pt], { style: { ...ctx.style, hidden: true } });
+        mk('perpendicular', [radius.id, pt]);
+        break;
+      }
+      // משיק מנקודה חיצונית: חיתוך המעגל עם מעגל שהקוטר שלו הוא הקטע מהנקודה למרכז
       const hidden = { ...ctx.style, hidden: true };
-      const m = mk('midpoint', [a, center], { style: hidden });
-      const aux = mk('circle', [m.id, a], { style: hidden });
-      const t1 = point('intersection', [aux.id, b], { index: 0 });
-      const t2 = point('intersection', [aux.id, b], { index: 1 });
-      mk('line', [a, t1.id]);
-      mk('line', [a, t2.id]);
+      const m = mk('midpoint', [pt, center], { style: hidden });
+      const aux = mk('circle', [m.id, pt], { style: hidden });
+      const t1 = point('intersection', [aux.id, circ], { index: 0 });
+      const t2 = point('intersection', [aux.id, circ], { index: 1 });
+      mk('line', [pt, t1.id]);
+      mk('line', [pt, t2.id]);
       break;
     }
     case 'angle':

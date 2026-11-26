@@ -15,6 +15,7 @@ import { toLocal } from '../../core/geometry/transform';
 import { shapeError } from '../../core/geometry/shapes';
 import {
   buildStep,
+  CIRCLE_TOOLS,
   newPoint,
   ON_CIRCLE_TOOLS,
   TOOL_SLOTS,
@@ -50,6 +51,8 @@ export class GeometryTool implements ToolHandler {
   private picked: string[] = [];
   private hoverLocal: { x: number; y: number } | null = null;
   private drag: Drag | null = null;
+  /** הכלי שהקלטים שנאספו שייכים אליו (החלפת כלי מתחילה מחדש) */
+  private pickedFor: string | null = null;
 
   constructor(private ctx: ToolContext) {}
 
@@ -97,6 +100,10 @@ export class GeometryTool implements ToolHandler {
 
   down(s: PointerSample): void {
     const tool = this.prefs().tool;
+    if (this.pickedFor !== tool) {
+      this.picked = [];
+      this.pickedFor = tool;
+    }
     let o = this.construction();
     const sol = o ? getSolution(o) : null;
     if (o && !sol) return; // המנוע עוד נטען
@@ -126,6 +133,13 @@ export class GeometryTool implements ToolHandler {
     }
 
     // ---- כלי בנייה: איסוף קלטים ----
+    // מעגל שנבחר מראש מהסרגל הקופץ
+    const prefill = this.ctx.state().geoPrefill;
+    if (prefill) {
+      this.ctx.state().setGeoPrefill(null);
+      if (this.picked.length === 0 && els.some((e) => e.id === prefill)) this.picked = [prefill];
+    }
+
     // צורה ידועה עם מידות לא תקינות – לא בונים (ההסבר מופיע בחלונית)
     const shape = this.prefs().shape;
     if (tool === 'shape' && shapeError(shape.id, shape.dims)) return;
@@ -204,6 +218,15 @@ export class GeometryTool implements ToolHandler {
       });
       elements = [...elements, ...added];
       this.picked = [];
+      // כלי מעגל (מהסרגל הקופץ): חוזרים לבחירה, והמעגל נשאר מסומן – אפשר להוסיף עוד
+      if (CIRCLE_TOOLS.includes(tool)) {
+        const circle = inputsCircle(added, elements);
+        this.ctx.state().updatePrefs((p) => ({ ...p, geo: { ...p.geo, tool: 'move' } }));
+        if (circle && o) {
+          this.ctx.state().setGeoSelection({ objectId: o.id, ids: [circle] });
+          this.setHighlight(o, [circle]);
+        }
+      }
     }
     if (created || complete) this.commit(tool, { ...o, elements }, isNew);
     this.ctx.requestOverlay();
@@ -326,4 +349,24 @@ export class GeometryTool implements ToolHandler {
       ctx.setLineDash([]);
     }
   }
+}
+
+/** המעגל שהבנייה נשענת עליו (כדי להשאיר אותו מסומן) */
+function inputsCircle(
+  added: readonly GeoElement[],
+  elements: readonly GeoElement[],
+): string | null {
+  const kinds = new Set(['circle', 'circleR', 'circle3', 'arc']);
+  const byId = new Map(elements.map((e) => [e.id, e]));
+  for (const e of added) {
+    for (const p of [e.id, ...e.parents]) {
+      const el = byId.get(p);
+      if (!el) continue;
+      if (kinds.has(el.kind) && !el.style.hidden) return el.id;
+      // נקודה על מעגל
+      const parent = el.kind === 'glider' ? byId.get(el.parents[0] ?? '') : undefined;
+      if (parent && kinds.has(parent.kind)) return parent.id;
+    }
+  }
+  return null;
 }

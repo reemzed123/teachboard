@@ -18,7 +18,6 @@ const GROUPS: { key: MessageKey; tools: GeoToolId[] }[] = [
     tools: ['move', 'point', 'segment', 'line', 'ray', 'polygon', 'regularPolygon', 'shape'],
   },
   { key: 'geo.group.curves', tools: ['circle', 'circleR', 'circle3', 'arc', 'ellipse'] },
-  { key: 'geo.group.circle', tools: ['chord', 'radius', 'centralAngle', 'inscribedAngle'] },
   {
     key: 'geo.group.construct',
     tools: [
@@ -30,7 +29,6 @@ const GROUPS: { key: MessageKey; tools: GeoToolId[] }[] = [
       'angleBisector',
       'median',
       'altitude',
-      'tangent',
     ],
   },
   { key: 'geo.group.measure', tools: ['length', 'angle', 'area', 'perimeter'] },
@@ -134,6 +132,7 @@ export function GeometryPanel() {
         </div>
       </fieldset>
 
+      <p className="tb-help">{t('geo.circleHelp')}</p>
       <ElementInspector />
     </SidePanel>
   );

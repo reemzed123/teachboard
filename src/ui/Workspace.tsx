@@ -8,6 +8,7 @@ import { attachEngine } from '../app/runtime';
 import { PageStrip } from './PageStrip';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SelectionToolbar } from './SelectionToolbar';
+import { GeoCircleBar } from './GeoCircleBar';
 import { TextEditor } from './TextEditor';
 import { ZoomControls } from './ZoomControls';
 import { Spotlight } from './teaching/Spotlight';
@@ -68,6 +69,7 @@ export function Workspace() {
       </ErrorBoundary>
       <ErrorBoundary fallback={() => null}>
         <SelectionToolbar />
+        <GeoCircleBar />
       </ErrorBoundary>
       <ErrorBoundary fallback={() => null}>
         <PageStrip />

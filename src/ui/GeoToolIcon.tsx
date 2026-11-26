@@ -246,13 +246,13 @@ const ICONS: Record<GeoToolId, ReactNode> = {
   ),
 };
 
-export function GeoToolIcon({ tool }: { tool: GeoToolId }) {
+export function GeoToolIcon({ tool, size = 36 }: { tool: GeoToolId; size?: number }) {
   return (
     <svg
       className="tb-geo-icon"
       viewBox="0 0 24 24"
-      width={36}
-      height={36}
+      width={size}
+      height={size}
       fill="none"
       stroke="currentColor"
       strokeWidth={1.5}

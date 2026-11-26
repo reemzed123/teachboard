@@ -105,6 +105,21 @@ describe('geometry tools', () => {
     expect(out.map((e) => e.kind)).toEqual(['foot', 'segment', 'angle']);
   });
 
+  it('tangent at a point on the circle: one line, perpendicular to the radius', () => {
+    const style = { color: '#000000', width: 2 };
+    const els: GeoElement[] = [
+      { id: 'o', kind: 'point', parents: [], params: { x: 0, y: 0 }, style },
+      { id: 'q', kind: 'point', parents: [], params: { x: 50, y: 0 }, style },
+      { id: 'c', kind: 'circle', parents: ['o', 'q'], style },
+      { id: 'g', kind: 'glider', parents: ['c'], params: { x: 0, y: 50 }, style },
+    ];
+    // גם בסדר מעגל → נקודה (מהסרגל הקופץ)
+    const out = buildStep('tangent', ['c', 'g'], ctx(els));
+    expect(out.map((e) => e.kind)).toEqual(['segment', 'perpendicular']);
+    expect(out[0]!.style.hidden).toBe(true);
+    expect(out[1]!.parents).toEqual([out[0]!.id, 'g']);
+  });
+
   it('tangent from an external point: two tangent lines', () => {
     const [A, B, C] = pts();
     const circ: GeoElement = {
