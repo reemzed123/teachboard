@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { GraphObject } from '../../src/core/document/types';
-import { graphPoints, placeLabel, type LabelRect } from '../../src/engine/render/drawGraph';
+import {
+  graphAsymptotes,
+  graphPoints,
+  placeLabel,
+  type LabelRect,
+} from '../../src/engine/render/drawGraph';
 
 const graph = (latex: string[], extra: Partial<GraphObject> = {}): GraphObject =>
   ({
@@ -30,6 +35,20 @@ describe('graph points', () => {
   it('two identical functions do not flood the graph with points', () => {
     const pts = graphPoints(graph(['x', 'x'], { showIntercepts: false }));
     expect(pts).toEqual([]);
+  });
+});
+
+describe('function analysis on the graph', () => {
+  it('extrema and asymptotes appear only when switched on', () => {
+    const g = graph(['x^3-3x', '\\frac{1}{x-2}'], {
+      showIntercepts: false,
+      showIntersections: false,
+    });
+    expect(graphPoints(g)).toEqual([]);
+    expect(graphAsymptotes(g)).toEqual([]);
+    const on = { ...g, showExtrema: true, showAsymptotes: true };
+    expect(graphPoints(on).map((p) => p.kind)).toEqual(['max', 'min']);
+    expect(graphAsymptotes(on).map((a) => Math.round(a.x * 100) / 100)).toEqual([2]);
   });
 });
 

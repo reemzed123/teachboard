@@ -1,7 +1,7 @@
 import { newId } from '../document/ids';
 import type { GeoElement, GeoKind, GeoStyle, MeasureKind } from '../document/types';
 import { nextPointLabel } from './construction';
-import { planShape, type ShapeDims, type ShapeId } from './shapes';
+import { planShape, SHAPE_MARKS, type ShapeDims, type ShapeId } from './shapes';
 
 // כלי הבנייה: מה כל כלי צריך (נקודות/ישרים/מעגלים), ואילו צעדים הוא מוסיף לבנייה.
 
@@ -90,7 +90,7 @@ export interface BuildContext {
   kindOf(id: string): GeoKind | undefined;
   parentsOf(id: string): string[];
   /** צורה ידועה: סוג, מידות (ס"מ/מעלות), גודל קבוע או חופשי */
-  shape?: { id: ShapeId; dims: ShapeDims; fixed: boolean };
+  shape?: { id: ShapeId; dims: ShapeDims; fixed: boolean; marks?: boolean };
   /** יחידות לוח בס"מ */
   unitsPerCm?: number;
   /** מיקום נקודה (לבניית הצורה סביב הנקודה שנלחצה) */
@@ -135,6 +135,33 @@ export function buildStep(tool: GeoToolId, inputs: string[], ctx: BuildContext):
   /** קטע → שתי הנקודות שלו */
   const ends = (id: string) => (ctx.kindOf(id) === 'segment' ? ctx.parentsOf(id) : [id]);
   const [a, b, c] = inputs as [string, string, string];
+  /** סימוני שוויון על צלעות וזוויות של צורה ידועה */
+  const addShapeMarks = (id: ShapeId, ids: string[]) => {
+    const marks = SHAPE_MARKS[id];
+    const n = ids.length;
+    for (let i = 0; i < n; i++) {
+      const p = ids[i]!;
+      const q = ids[(i + 1) % n]!;
+      const side = out.find(
+        (e) => e.kind === 'segment' && e.parents[0] === p && e.parents[1] === q,
+      );
+      if (!side) continue;
+      const ticks = marks.ticks?.[i] ?? 0;
+      const arrows = marks.arrows?.[i] ?? 0;
+      if (ticks) side.style = { ...side.style, ticks };
+      if (arrows) {
+        side.style = { ...side.style, arrows };
+        // צלעות מקבילות מנוגדות בכיוון ההקפה – מהפכים, כדי שהחיצים יצביעו לאותו כיוון
+        if (i >= n / 2) side.parents = [q, p];
+      }
+    }
+    marks.angles?.forEach((arcs, i) => {
+      if (!arcs) return;
+      mk('angle', [ids[(i - 1 + n) % n]!, ids[i]!, ids[(i + 1) % n]!], {
+        style: { ...ctx.style, width: 1.5, showLabel: false, arcs },
+      });
+    });
+  };
   /** מרכז המעגל (קיים, או בנייה מוסתרת: חיתוך אנכים אמצעיים) */
   const centerOf = (circle: string): string | undefined => {
     const kind = ctx.kindOf(circle);
@@ -194,6 +221,7 @@ export function buildStep(tool: GeoToolId, inputs: string[], ctx: BuildContext):
         if (e) e.style = { ...e.style, label: nextPointLabel(all()) };
       }
       edges(ids);
+      if (sh.marks !== false) addShapeMarks(sh.id, ids);
       break;
     }
     case 'chord':

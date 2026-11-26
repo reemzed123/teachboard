@@ -1,4 +1,5 @@
 import type { GraphObject, TableObject } from '../../core/document/types';
+import { extrema, verticalAsymptotes } from '../../core/math/analysis';
 import { findRoots, formatNumber, intersections, niceStep } from '../../core/math/numeric';
 import { compileExpression, type RealFn } from '../../core/math/parse';
 
@@ -25,6 +26,33 @@ export interface GraphPoint {
   x: number;
   y: number;
   color: string;
+  /** נקודת קיצון (מוצגת עם max / min) */
+  kind?: 'max' | 'min';
+}
+
+/** אסימפטוטה אנכית: x וצבע הפונקציה */
+export interface GraphAsymptote {
+  x: number;
+  color: string;
+}
+
+const asymptoteCache = new WeakMap<GraphObject, GraphAsymptote[]>();
+
+/** האסימפטוטות האנכיות שמוצגות (מחושבות פעם אחת לכל גרסה של הגרף) */
+export function graphAsymptotes(o: GraphObject): GraphAsymptote[] {
+  if (!o.showAsymptotes) return [];
+  let out = asymptoteCache.get(o);
+  if (!out) {
+    out = [];
+    for (const f of o.functions) {
+      const fn = f.visible ? functionFor(f.latex) : null;
+      if (!fn) continue;
+      for (const x of verticalAsymptotes(fn, o.range.xMin, o.range.xMax))
+        out.push({ x, color: f.color });
+    }
+    asymptoteCache.set(o, out);
+  }
+  return out;
 }
 
 /** נקודות החיתוך שמוצגות (עם הצירים ובין הגרפים) */
@@ -55,6 +83,13 @@ function computeGraphPoints(o: GraphObject): GraphPoint[] {
       if (xMin <= 0 && xMax >= 0) {
         const y0 = fn(0);
         if (inside(0, y0)) pts.push({ x: 0, y: y0, color: f.color });
+      }
+    }
+  }
+  if (o.showExtrema) {
+    for (const { f, fn } of fns) {
+      for (const e of extrema(fn, xMin, xMax)) {
+        if (inside(e.x, e.y)) pts.push({ x: e.x, y: e.y, color: f.color, kind: e.kind });
       }
     }
   }
@@ -176,6 +211,24 @@ export function drawGraph(ctx: CanvasRenderingContext2D, o: GraphObject): void {
     ctx.stroke();
   }
 
+  // אסימפטוטות אנכיות: קו מקווקו בצבע הפונקציה, עם x = …
+  ctx.save();
+  ctx.setLineDash([6, 5]);
+  ctx.lineWidth = 1.5;
+  ctx.font = `12px ${FONT}`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  for (const a of graphAsymptotes(o)) {
+    ctx.strokeStyle = a.color;
+    ctx.beginPath();
+    ctx.moveTo(X(a.x), 0);
+    ctx.lineTo(X(a.x), H);
+    ctx.stroke();
+    ctx.fillStyle = a.color;
+    ctx.fillText(`x = ${formatNumber(a.x)}`, X(a.x) + 4, 6);
+  }
+  ctx.restore();
+
   // נקודות חיתוך עם תוויות
   ctx.font = `12px ${FONT}`;
   ctx.textAlign = 'left';
@@ -190,7 +243,8 @@ export function drawGraph(ctx: CanvasRenderingContext2D, o: GraphObject): void {
     ctx.strokeStyle = p.color;
     ctx.stroke();
     ctx.fillStyle = '#1c2430';
-    const text = `(${formatNumber(p.x)}, ${formatNumber(p.y)})`;
+    const coords = `(${formatNumber(p.x)}, ${formatNumber(p.y)})`;
+    const text = p.kind ? `${p.kind} ${coords}` : coords;
     const pos = placeLabel(placed, X(p.x), Y(p.y), ctx.measureText(text).width, 14);
     ctx.fillText(text, pos.x, pos.y);
   }

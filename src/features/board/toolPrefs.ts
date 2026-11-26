@@ -46,7 +46,7 @@ export interface ToolPrefs {
     n: number;
     radiusCm: number;
     /** צורה ידועה: הסוג, המידות (ס"מ / מעלות), וגודל קבוע או חופשי */
-    shape: { id: ShapeId; dims: ShapeDims; fixed: boolean };
+    shape: { id: ShapeId; dims: ShapeDims; fixed: boolean; marks: boolean };
   };
 }
 
@@ -90,7 +90,7 @@ export function defaultToolPrefs(): ToolPrefs {
       color: '#1c2430',
       n: 5,
       radiusCm: 3,
-      shape: { id: 'rectangle', dims: { ...DEFAULT_DIMS }, fixed: true },
+      shape: { id: 'rectangle', dims: { ...DEFAULT_DIMS }, fixed: true, marks: true },
     },
   };
 }
@@ -160,7 +160,12 @@ export function parseToolPrefs(raw: unknown): ToolPrefs {
 
 function parseShape(raw: unknown, d: ToolPrefs['geo']['shape']): ToolPrefs['geo']['shape'] {
   if (typeof raw !== 'object' || raw === null) return d;
-  const r = raw as { id?: unknown; dims?: Record<string, unknown>; fixed?: unknown };
+  const r = raw as {
+    id?: unknown;
+    dims?: Record<string, unknown>;
+    fixed?: unknown;
+    marks?: unknown;
+  };
   const dims = { ...d.dims };
   for (const k of Object.keys(dims) as DimKey[]) {
     dims[k] = clamp(r.dims?.[k], 0.1, k === 'angle' ? 179 : 100, d.dims[k]);
@@ -169,5 +174,6 @@ function parseShape(raw: unknown, d: ToolPrefs['geo']['shape']): ToolPrefs['geo'
     id: (SHAPE_IDS as readonly unknown[]).includes(r.id) ? (r.id as ShapeId) : d.id,
     dims,
     fixed: typeof r.fixed === 'boolean' ? r.fixed : d.fixed,
+    marks: typeof r.marks === 'boolean' ? r.marks : d.marks,
   };
 }

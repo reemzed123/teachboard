@@ -136,3 +136,58 @@ describe('circle tools and shapes', () => {
     expect(free.find((e) => e.kind === 'point')?.params).toEqual({ x: 40, y: 20 });
   });
 });
+
+describe('equality marks on known shapes', () => {
+  const ctxFor = (els: GeoElement[]) => {
+    const byId = new Map(els.map((e) => [e.id, e]));
+    return {
+      elements: els,
+      style,
+      n: 5,
+      r: 50,
+      kindOf: (id: string) => byId.get(id)?.kind,
+      parentsOf: (id: string) => byId.get(id)?.parents ?? [],
+      unitsPerCm: 10,
+      posOf: () => ({ x: 0, y: 0 }),
+    };
+  };
+  const build = (id: 'parallelogram' | 'isosceles' | 'kite' | 'rectangle', marks = true) =>
+    buildStep('shape', ['a'], {
+      ...ctxFor([pt('a', 0, 0, 'A')]),
+      shape: { id, dims: { a: 5, b: 4, c: 6, h: 3, angle: 60 }, fixed: false, marks },
+    });
+
+  it('parallelogram: opposite sides equal and parallel (arrows point the same way), opposite angles equal', () => {
+    const out = build('parallelogram');
+    const segs = out.filter((e) => e.kind === 'segment');
+    expect(segs.map((e) => e.style.ticks)).toEqual([1, 2, 1, 2]);
+    expect(segs.map((e) => e.style.arrows)).toEqual([1, 2, 1, 2]);
+    // CD הפוך ל-DC, כדי שיהיה באותו כיוון כמו AB
+    const poly = out.find((e) => e.kind === 'polygon')!;
+    const [A, B, C, D] = poly.parents;
+    expect(segs[0]!.parents).toEqual([A, B]);
+    expect(segs[2]!.parents).toEqual([D, C]);
+    const angles = out.filter((e) => e.kind === 'angle');
+    expect(angles.map((e) => e.style.arcs)).toEqual([1, 2, 1, 2]);
+    expect(angles.every((e) => e.style.showLabel === false)).toBe(true);
+  });
+
+  it('isosceles: equal legs and base angles; kite: two pairs of equal sides', () => {
+    const iso = build('isosceles');
+    expect(iso.filter((e) => e.kind === 'segment').map((e) => e.style.ticks)).toEqual([
+      undefined,
+      1,
+      1,
+    ]);
+    expect(iso.filter((e) => e.kind === 'angle')).toHaveLength(2);
+    const kite = build('kite');
+    expect(kite.filter((e) => e.kind === 'segment').map((e) => e.style.ticks)).toEqual([
+      1, 2, 2, 1,
+    ]);
+  });
+
+  it('marks can be turned off', () => {
+    const out = build('rectangle', false);
+    expect(out.some((e) => e.kind === 'angle' || e.style.ticks)).toBe(false);
+  });
+});

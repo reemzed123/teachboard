@@ -239,12 +239,15 @@ function GraphEditor({ graph }: { graph: GraphObject }) {
             ['grid', 'math.grid'],
             ['showIntercepts', 'math.intercepts'],
             ['showIntersections', 'math.intersections'],
+            ['showExtrema', 'math.extrema'],
+            ['showAsymptotes', 'math.asymptotes'],
           ] as const
         ).map(([k, label]) => (
           <label key={k} className="tb-check">
             <input
               type="checkbox"
-              checked={graph[k]}
+              data-graph-option={k}
+              checked={!!graph[k]}
               onChange={(e) => update(() => ({ [k]: e.target.checked }))}
             />
             {t(label)}

@@ -266,6 +266,8 @@ function cleanGraph(v: Obj, id: string): GraphObject | null {
       grid: v.grid !== false,
       showIntercepts: v.showIntercepts === true,
       showIntersections: v.showIntersections === true,
+      ...(v.showExtrema === true ? { showExtrema: true } : {}),
+      ...(v.showAsymptotes === true ? { showAsymptotes: true } : {}),
       functions,
     },
     v,

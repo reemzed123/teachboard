@@ -5,7 +5,7 @@ import type { RealFn } from './parse';
 const finite = (v: number) => Number.isFinite(v);
 
 /** חיפוש בינארי לשורש בין a ל-b (כש-f מחליפה סימן) */
-function bisect(f: RealFn, a: number, b: number): number {
+export function bisect(f: RealFn, a: number, b: number): number {
   let fa = f(a);
   for (let i = 0; i < 60; i++) {
     const m = (a + b) / 2;

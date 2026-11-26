@@ -76,6 +76,15 @@ export function GeoShapeOptions() {
           </label>
         ))}
       </div>
+      <label className="tb-check">
+        <input
+          type="checkbox"
+          data-testid="geo-shape-marks"
+          checked={shape.marks}
+          onChange={(e) => set({ marks: e.target.checked })}
+        />
+        {t('geo.shapeMarks')}
+      </label>
       {error && (
         <p className="tb-help tb-geo-error" role="alert" data-testid="geo-shape-error">
           {t(`geo.shapeError.${error}` as MessageKey)}

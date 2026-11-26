@@ -185,3 +185,31 @@ export function relPosition(
     y: ay + u * (by - ay) - v * (bx - ax),
   };
 }
+
+/**
+ * סימוני שוויון בצורה ידועה (לפי סדר הקודקודים A, B, C, D).
+ * צלע i היא מקודקוד i לקודקוד i+1. ticks – קווקווים לצלעות שוות, arrows – חיצים לצלעות מקבילות,
+ * angles – מספר קשתות לזוויות שוות (זווית ישרה מסומנת בריבוע).
+ */
+export interface ShapeMarks {
+  ticks?: number[];
+  arrows?: number[];
+  angles?: number[];
+}
+
+export const SHAPE_MARKS: Record<ShapeId, ShapeMarks> = {
+  triSSS: {},
+  triSAS: {},
+  isosceles: { ticks: [0, 1, 1], angles: [1, 1, 0] },
+  equilateral: { ticks: [1, 1, 1], angles: [1, 1, 1] },
+  right: { angles: [1, 0, 0] },
+  rightIsosceles: { ticks: [1, 0, 1], angles: [1, 1, 1] },
+  square: { ticks: [1, 1, 1, 1], angles: [1, 1, 1, 1] },
+  rectangle: { ticks: [1, 2, 1, 2], angles: [1, 1, 1, 1] },
+  rhombus: { ticks: [1, 1, 1, 1], angles: [1, 2, 1, 2] },
+  parallelogram: { ticks: [1, 2, 1, 2], arrows: [1, 2, 1, 2], angles: [1, 2, 1, 2] },
+  kite: { ticks: [1, 2, 2, 1], angles: [0, 1, 0, 1] },
+  trapezoid: { arrows: [1, 0, 1, 0] },
+  isoTrapezoid: { ticks: [0, 1, 0, 1], arrows: [1, 0, 1, 0], angles: [1, 1, 2, 2] },
+  rightTrapezoid: { arrows: [1, 0, 1, 0], angles: [1, 0, 0, 1] },
+};

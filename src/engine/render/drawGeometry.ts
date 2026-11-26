@@ -54,6 +54,8 @@ function drawParallelArrows(
   x2: number,
   y2: number,
   n: number,
+  /** הזזה לאורך הקטע (כשיש גם קווקווים באמצע) */
+  shift = 0,
 ) {
   const len = Math.hypot(x2 - x1, y2 - y1) || 1;
   const ux = (x2 - x1) / len;
@@ -62,8 +64,8 @@ function drawParallelArrows(
   const my = (y1 + y2) / 2;
   ctx.beginPath();
   for (let i = 0; i < n; i++) {
-    const tx = mx + ux * (i * 7 - (n - 1) * 3.5 + 4);
-    const ty = my + uy * (i * 7 - (n - 1) * 3.5 + 4);
+    const tx = mx + ux * (i * 7 - (n - 1) * 3.5 + 4 + shift);
+    const ty = my + uy * (i * 7 - (n - 1) * 3.5 + 4 + shift);
     ctx.moveTo(tx - ux * 7 - uy * 5, ty - uy * 7 + ux * 5);
     ctx.lineTo(tx, ty);
     ctx.lineTo(tx - ux * 7 + uy * 5, ty - uy * 7 - ux * 5);
@@ -168,15 +170,24 @@ function letterCenter(s: { x: number; y: number }) {
   return { x: s.x + 12, y: s.y - 12 };
 }
 
-/** זוויות כפולות (אותו קודקוד ואותן זרועות) – מציגים רק אחת, עדיפות לזווית עם ביטוי */
+/** מפתח לזווית: קודקוד + שתי הזרועות (בלי חשיבות לסדר) */
+function angleKey(e: GeoElement): string | null {
+  if (e.kind !== 'angle' || e.style.hidden || e.parents.length !== 3) return null;
+  const [a, v, c] = e.parents as [string, string, string];
+  return `${v}|${[a, c].sort().join('|')}`;
+}
+
+/** עדיפות לזווית שמוצגת מתוך כפולות: עם ביטוי, אחר כך עם ערך גלוי */
+const anglePriority = (e: GeoElement) => (e.style.text ? 2 : e.style.showLabel !== false ? 1 : 0);
+
+/** זוויות כפולות (אותו קודקוד ואותן זרועות) – מציגים רק אחת, עדיפות לזווית עם ביטוי או ערך */
 export function duplicateAngles(elements: readonly GeoElement[]): Set<string> {
   const best = new Map<string, GeoElement>();
   for (const e of elements) {
-    if (e.kind !== 'angle' || e.style.hidden || e.parents.length !== 3) continue;
-    const [a, v, c] = e.parents as [string, string, string];
-    const key = `${v}|${[a, c].sort().join('|')}`;
+    const key = angleKey(e);
+    if (!key) continue;
     const prev = best.get(key);
-    if (!prev || (!prev.style.text && e.style.text)) best.set(key, e);
+    if (!prev || anglePriority(e) > anglePriority(prev)) best.set(key, e);
   }
   const keep = new Set([...best.values()].map((e) => e.id));
   return new Set(
@@ -184,6 +195,21 @@ export function duplicateAngles(elements: readonly GeoElement[]): Set<string> {
       .filter((e) => e.kind === 'angle' && !keep.has(e.id) && !e.style.hidden)
       .map((e) => e.id),
   );
+}
+
+/** מספר הקשתות של זווית – הגדול מבין הכפולות (סימון "זוויות שוות" לא הולך לאיבוד) */
+function mergedArcs(elements: readonly GeoElement[]): Map<string, number> {
+  const max = new Map<string, number>();
+  for (const e of elements) {
+    const key = angleKey(e);
+    if (key) max.set(key, Math.max(max.get(key) ?? 1, e.style.arcs ?? 1));
+  }
+  const out = new Map<string, number>();
+  for (const e of elements) {
+    const key = angleKey(e);
+    if (key) out.set(e.id, max.get(key)!);
+  }
+  return out;
 }
 
 /** ציור הבנייה. selected = אלמנטים מודגשים (בעריכה). */
@@ -282,7 +308,8 @@ export function drawGeometry(
     if (s.t === 'ln' && s.mode === 'segment') {
       ctx.lineWidth = Math.max(1.5, e.style.width * 0.8);
       if (e.style.ticks) drawTicks(ctx, s.x1, s.y1, s.x2, s.y2, e.style.ticks);
-      if (e.style.arrows) drawParallelArrows(ctx, s.x1, s.y1, s.x2, s.y2, e.style.arrows);
+      if (e.style.arrows)
+        drawParallelArrows(ctx, s.x1, s.y1, s.x2, s.y2, e.style.arrows, e.style.ticks ? 18 : 0);
     }
     if (s.t === 'ln' && s.mode !== 'segment' && e.style.arrows) {
       drawParallelArrows(ctx, s.x1, s.y1, s.x2, s.y2, e.style.arrows);
@@ -319,6 +346,7 @@ export function drawGeometry(
 
   // 3. זוויות: קשת (או ריבוע לזווית ישרה) ומספר מעלות. זווית כפולה (אותו קודקוד וזרועות) – פעם אחת.
   const skipAngles = duplicateAngles(o.elements);
+  const arcsOf = mergedArcs(o.elements);
   pass((e, s) => {
     if (s.t !== 'ang' || skipAngles.has(e.id)) return;
     ctx.strokeStyle = e.style.color;
@@ -335,7 +363,7 @@ export function drawGeometry(
       ctx.lineTo(s.vx + Math.cos(b) * k, s.vy + Math.sin(b) * k);
       ctx.stroke();
     } else {
-      const arcs = Math.max(1, e.style.arcs ?? 1);
+      const arcs = Math.max(1, arcsOf.get(e.id) ?? e.style.arcs ?? 1);
       for (let i = 0; i < arcs; i++) {
         ctx.beginPath();
         ctx.arc(s.vx, s.vy, r + i * 5, s.a0, s.a0 + s.sweep, s.sweep < 0);

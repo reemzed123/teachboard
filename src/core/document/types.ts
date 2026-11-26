@@ -121,6 +121,10 @@ export interface GraphObject extends ObjectBase {
   showIntercepts: boolean;
   /** נקודות חיתוך בין הגרפים */
   showIntersections: boolean;
+  /** חקירה: נקודות קיצון (max/min) */
+  showExtrema?: boolean;
+  /** חקירה: אסימפטוטות אנכיות (קו מקווקו) */
+  showAsymptotes?: boolean;
   functions: GraphFunction[];
 }
 
