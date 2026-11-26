@@ -9,6 +9,7 @@ import { SidePanel } from './SidePanel';
 import { GeoToolIcon } from './GeoToolIcon';
 import { GeoShapeOptions } from './GeoShapeOptions';
 import { GeoPolygonDecorations } from './GeoPolygonDecorations';
+import { GeoPolygonLabels } from './GeoPolygonLabels';
 import { MAX_POLYGON_SIDES } from '../features/board/toolPrefs';
 
 const GROUPS: { key: MessageKey; tools: GeoToolId[] }[] = [
@@ -334,6 +335,7 @@ function ElementInspector() {
         </>
       )}
       {el.kind === 'polygon' && <GeoPolygonDecorations obj={obj} poly={el} />}
+      {el.kind === 'polygon' && <GeoPolygonLabels obj={obj} poly={el} />}
       {fillable && (
         <label className="tb-check">
           <input

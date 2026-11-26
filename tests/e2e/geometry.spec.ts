@@ -295,3 +295,32 @@ test('central and inscribed angles on a circle; algebraic label for an angle', a
   });
   expect(text).toBe('x+3');
 });
+
+test('algebraic expressions for sides and angles from the polygon; angle arc is clickable', async ({
+  page,
+}) => {
+  await triangle(page); // A(150,450) B(450,450) C(250,200)
+  await tool(page, 'move');
+  await click(page, 280, 380);
+  const labels = page.getByTestId('geo-labels');
+  await labels.locator('[data-label-row="s0"]').fill('2x');
+  await labels.locator('[data-label-row="s0"]').press('Enter');
+  await labels.locator('[data-label-row="a0"]').fill('x+3');
+  await labels.locator('[data-label-row="a0"]').press('Enter');
+  const texts = await page.evaluate(() => {
+    const st = (window as any).__tb.runtime.board.getState();
+    const g = st.doc.pages
+      .find((p: any) => p.id === st.pageId)
+      .objects.find((o: any) => o.type === 'geometry');
+    return g.elements.filter((e: any) => e.style.text).map((e: any) => [e.kind, e.style.text]);
+  });
+  expect(texts).toEqual([
+    ['segment', '2x'],
+    ['angle', 'x+3'],
+  ]);
+  // לחיצה על קשת הזווית ב-A בוחרת את הזווית
+  await click(page, 150, 200); // ריק – מבטל בחירה
+  await click(page, 175, 440);
+  await expect(page.getByTestId('geo-inspector')).toContainText('זווית');
+  await expect(page.getByTestId('geo-text')).toHaveValue('x+3');
+});

@@ -355,7 +355,8 @@ export const he = {
   'geo.sides': 'מספר צלעות',
   'geo.radius': 'רדיוס (ס"מ)',
   'geo.newColor': 'צבע לאלמנטים חדשים',
-  'geo.selectHelp': 'בכלי "בחירה והזזה" – לחצו על אלמנט כדי לשנות צבע, שם, סימונים ועוד.',
+  'geo.selectHelp':
+    'בכלי "בחירה והזזה" – לחצו על אלמנט כדי לשנות צבע, שם, סימונים ועוד. לחיצה בתוך מצולע: ביטויים אלגבריים לצלעות ולזוויות (למשל x+3).',
   'geo.selected': 'נבחר',
   'geo.name': 'שם',
   'geo.showName': 'הצגת השם',
@@ -470,6 +471,10 @@ export const he = {
   'geo.text': 'ביטוי / שם (למשל x+3)',
   'geo.showValueToo': 'להציג גם את הערך המחושב',
   'geo.showArcDegrees': 'הצגת מעלות הקשת',
+  'geo.labels': 'ביטויים אלגבריים (למשל x+3)',
+  'geo.labelsHelp': 'כתבו ביטוי במקום הערך. השאירו ריק כדי להציג את הערך המחושב.',
+  'geo.sideLabel': 'צלע {name}',
+  'geo.angleLabel': 'זווית {name}',
   'tool.geometry': 'גיאומטריה',
 
   'folder.untitled': 'תיקייה חדשה',

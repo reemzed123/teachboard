@@ -241,8 +241,17 @@ export function distanceTo(s: Solved, x: number, y: number): number {
       }
       return best;
     }
-    case 'ang':
-      return Math.hypot(s.vx - x, s.vy - y) < 34 ? 10 : Infinity;
+    case 'ang': {
+      // הקשת (רדיוס 26) או המספר (רדיוס 46) – לחיצה עליהם בוחרת את הזווית
+      const r = Math.hypot(x - s.vx, y - s.vy);
+      let rel = Math.atan2(y - s.vy, x - s.vx) - s.a0;
+      while (rel > Math.PI) rel -= 2 * Math.PI;
+      while (rel <= -Math.PI) rel += 2 * Math.PI;
+      const inside =
+        s.sweep >= 0 ? rel >= -0.15 && rel <= s.sweep + 0.15 : rel <= 0.15 && rel >= s.sweep - 0.15;
+      if (inside && r > 14 && r < 60) return Math.max(0, Math.abs(r - 26) - 8) * 0.5;
+      return r < 34 ? 10 : Infinity;
+    }
     default:
       return Infinity;
   }
