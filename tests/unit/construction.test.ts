@@ -85,3 +85,17 @@ describe('hit testing', () => {
     expect(freeAncestors(e2, 'poly').sort()).toEqual(['A', 'B']);
   });
 });
+
+describe('clicking inside nested polygons', () => {
+  it('selects the inner (smaller) polygon, the outer one around it', () => {
+    const els = [el('big', 'polygon'), el('small', 'polygon')];
+    const sol: Solution = new Map([
+      ['big', { t: 'poly', pts: [0, 0, 400, 0, 400, 400, 0, 400] }],
+      ['small', { t: 'poly', pts: [100, 100, 200, 100, 150, 200] }],
+    ]);
+    expect(hitElement(els, sol, 150, 130, 8, 'any')!.id).toBe('small');
+    expect(hitElement(els, sol, 300, 300, 8, 'any')!.id).toBe('big');
+    // גם כשהקטן נוצר קודם ברשימה
+    expect(hitElement([...els].reverse(), sol, 150, 130, 8, 'any')!.id).toBe('small');
+  });
+});

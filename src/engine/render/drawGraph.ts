@@ -28,7 +28,19 @@ export interface GraphPoint {
 }
 
 /** נקודות החיתוך שמוצגות (עם הצירים ובין הגרפים) */
+/** מטמון: הגרף לא משתנה (אובייקט חדש בכל שינוי), אז לא מחשבים שוב בכל ציור */
+const pointsCache = new WeakMap<GraphObject, GraphPoint[]>();
+
 export function graphPoints(o: GraphObject): GraphPoint[] {
+  let pts = pointsCache.get(o);
+  if (!pts) {
+    pts = computeGraphPoints(o);
+    pointsCache.set(o, pts);
+  }
+  return pts;
+}
+
+function computeGraphPoints(o: GraphObject): GraphPoint[] {
   const { xMin, xMax, yMin, yMax } = o.range;
   const fns = o.functions
     .filter((f) => f.visible)
@@ -168,6 +180,7 @@ export function drawGraph(ctx: CanvasRenderingContext2D, o: GraphObject): void {
   ctx.font = `12px ${FONT}`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'bottom';
+  const placed: LabelRect[] = [];
   for (const p of graphPoints(o)) {
     ctx.beginPath();
     ctx.arc(X(p.x), Y(p.y), 4.5, 0, Math.PI * 2);
@@ -177,13 +190,48 @@ export function drawGraph(ctx: CanvasRenderingContext2D, o: GraphObject): void {
     ctx.strokeStyle = p.color;
     ctx.stroke();
     ctx.fillStyle = '#1c2430';
-    ctx.fillText(`(${formatNumber(p.x)}, ${formatNumber(p.y)})`, X(p.x) + 6, Y(p.y) - 4);
+    const text = `(${formatNumber(p.x)}, ${formatNumber(p.y)})`;
+    const pos = placeLabel(placed, X(p.x), Y(p.y), ctx.measureText(text).width, 14);
+    ctx.fillText(text, pos.x, pos.y);
   }
   ctx.restore();
 
   ctx.strokeStyle = '#c3cbd6';
   ctx.lineWidth = 1;
   ctx.strokeRect(0, 0, W, H);
+}
+
+export interface LabelRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+const overlaps = (a: LabelRect, b: LabelRect) =>
+  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/**
+ * מיקום לתווית של נקודה (px, py) שלא עולה על תוויות קודמות:
+ * מעל-ימין; אם תפוס – מתחת-ימין; אחר כך מעל-שמאל ומתחת-שמאל. מחזיר את נקודת הבסיס לכתיבה.
+ */
+export function placeLabel(
+  placed: LabelRect[],
+  px: number,
+  py: number,
+  w: number,
+  h: number,
+): { x: number; y: number } {
+  const options = [
+    { x: px + 6, y: py - 4 },
+    { x: px + 6, y: py + 4 + h },
+    { x: px - 6 - w, y: py - 4 },
+    { x: px - 6 - w, y: py + 4 + h },
+  ];
+  const rectOf = (o: { x: number; y: number }) => ({ x: o.x, y: o.y - h, w, h });
+  const free = options.find((o) => !placed.some((r) => overlaps(r, rectOf(o)))) ?? options[0]!;
+  placed.push(rectOf(free));
+  return free;
 }
 
 export function drawTable(ctx: CanvasRenderingContext2D, o: TableObject): void {

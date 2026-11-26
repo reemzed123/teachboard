@@ -120,7 +120,7 @@ export function planShape(id: ShapeId, d: ShapeDims): ShapePlan | null {
       return tri(d.c, d.b * Math.cos(al), d.b * Math.sin(al));
     case 'isosceles':
       // בסיס AB = c, שוקיים AC = BC = b
-      return tri(d.c, d.c / 2, Math.sqrt(d.b ** 2 - d.c ** 2 / 4));
+      return tri(d.c, d.c / 2, Math.sqrt(Math.max(0, d.b ** 2 - d.c ** 2 / 4)));
     case 'equilateral':
       return tri(d.a, d.a / 2, (d.a * Math.sqrt(3)) / 2);
     case 'right':
@@ -152,7 +152,8 @@ export function planShape(id: ShapeId, d: ShapeDims): ShapePlan | null {
       // AB = AD = a, CB = CD = b, הזווית ב-A; האלכסון AC הוא ציר הסימטריה (הבסיס)
       const half = al / 2;
       const s = d.a * Math.sin(half);
-      const p = d.a * Math.cos(half) + Math.sqrt(d.b ** 2 - s ** 2);
+      const p = d.a * Math.cos(half) + Math.sqrt(Math.max(0, d.b ** 2 - s ** 2));
+      if (!(p > 1e-6)) return null; // הגנה נוספת (המידות כבר נבדקו)
       const x = d.a * Math.cos(half);
       return { base: p, vertices: ['A', [x / p, s / p], 'B', [x / p, -s / p]] };
     }

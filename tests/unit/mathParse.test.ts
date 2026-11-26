@@ -57,4 +57,16 @@ describe('math expression parser', () => {
     expect(() => compileExpression('constructor')).toThrow(MathParseError);
     expect(() => compileExpression('alert(1)')).toThrow(MathParseError);
   });
+
+  it('powers are right-associative: 2^3^2 = 2^9', () => {
+    expect(compileExpression('2^3^2')(0)).toBe(512);
+    expect(compileExpression('x^2^3')(2)).toBe(256);
+    expect(compileExpression('x^-1')(4)).toBe(0.25);
+  });
+
+  it('indexed function names on the left side are ignored: f_1(x)=, f_{12}(x)=', () => {
+    expect(compileExpression('f_1(x)=x+1')(2)).toBe(3);
+    expect(compileExpression('f_{12}\\left(x\\right)=2x')(3)).toBe(6);
+    expect(compileExpression('g(x)=x^2')(3)).toBe(9);
+  });
 });

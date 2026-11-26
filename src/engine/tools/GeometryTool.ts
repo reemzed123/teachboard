@@ -13,7 +13,7 @@ import {
   type HitType,
   type Solution,
 } from '../../core/geometry/construction';
-import { toLocal } from '../../core/geometry/transform';
+import { toLocal, toWorld } from '../../core/geometry/transform';
 import { shapeError } from '../../core/geometry/shapes';
 import {
   buildStep,
@@ -455,18 +455,16 @@ export class GeometryTool implements ToolHandler {
     for (const id of this.picked) {
       const s = sol.get(id);
       if (s?.t !== 'pt') continue;
-      const w = boardToScreen(view, s.x + o.transform.x, s.y + o.transform.y);
+      const wp = toWorld(o.transform, s.x, s.y);
+      const w = boardToScreen(view, wp.x, wp.y);
       ctx.beginPath();
       ctx.arc(w.x, w.y, 9, 0, Math.PI * 2);
       ctx.fill();
       last = w;
     }
     if (last && this.hoverLocal) {
-      const h = boardToScreen(
-        view,
-        this.hoverLocal.x + o.transform.x,
-        this.hoverLocal.y + o.transform.y,
-      );
+      const hw = toWorld(o.transform, this.hoverLocal.x, this.hoverLocal.y);
+      const h = boardToScreen(view, hw.x, hw.y);
       ctx.setLineDash([5, 5]);
       ctx.lineWidth = 1.5;
       ctx.beginPath();

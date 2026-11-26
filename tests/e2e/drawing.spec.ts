@@ -448,3 +448,21 @@ test('stroke stays in place when the side panel closes as writing starts', async
   await dispatchPointer(page, 'pointerup', 300, 300, { pointerType: 'pen' });
   await expect.poll(() => count(page)).toBe('1');
 });
+
+test('switching windows mid-stroke (Alt+Tab) does not leave a stuck stroke', async ({ page }) => {
+  const box = (await page.getByTestId('board').boundingBox())!;
+  await page.mouse.move(box.x + 100, box.y + 150);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 250, box.y + 180, { steps: 5 });
+  // החלון מאבד פוקוס באמצע הקו (ההרמה לא מגיעה ללוח)
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await page.mouse.move(box.x + 300, box.y + 260, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.getByTestId('board')).toHaveAttribute('data-object-count', '0');
+  // הקו הבא נכתב כרגיל
+  await page.mouse.move(box.x + 100, box.y + 350);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 300, box.y + 380, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.getByTestId('board')).toHaveAttribute('data-object-count', '1');
+});

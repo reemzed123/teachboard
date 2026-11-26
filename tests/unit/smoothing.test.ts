@@ -62,6 +62,29 @@ describe('beautifyStroke', () => {
     expect(out[1]).toBeCloseTo(4, 0);
   });
 
+  it('keeps the short tick of a root sign (√) and the top bar of a small 7', () => {
+    // √: וו קצר למטה-ימינה, ואז קו ארוך למעלה-ימינה (זווית ~108°) – חלק מהסימן
+    const root: number[] = [];
+    for (let i = 0; i <= 3; i++) root.push(i * 1.5, i * 1.5, 0.5);
+    for (let i = 1; i <= 15; i++) root.push(4.5 + i, 4.5 - i * 2, 0.5);
+    const out = beautifyStroke(root, 2);
+    expect(out[0]).toBeCloseTo(0, 0);
+    expect(out[1]).toBeCloseTo(0, 0);
+    // 7 קטן: פס עליון קצר ימינה, ואז קו ארוך למטה-שמאלה
+    const seven: number[] = [];
+    for (let i = 0; i <= 4; i++) seven.push(i * 1.2, 0, 0.5);
+    for (let i = 1; i <= 12; i++) seven.push(4.8 - i * 0.6, i * 1.4, 0.5);
+    const out7 = beautifyStroke(seven, 2);
+    expect(out7[0]).toBeCloseTo(0, 0);
+  });
+
+  it('does not trim anything from a stroke that is short compared to the hook', () => {
+    const short = [0, 0, 0.5, 2, 2, 0.5, 4, 4, 0.5, 2, 6, 0.5, 0, 8, 0.5, -2, 10, 0.5];
+    const out = beautifyStroke(short, 3);
+    expect(out[0]).toBeCloseTo(0, 0);
+    expect(out[out.length - 3]).toBeCloseTo(-2, 0);
+  });
+
   it('smooths sudden pressure changes', () => {
     const pts: number[] = [];
     for (let i = 0; i < 30; i++) pts.push(i * 3, 0, i % 2 ? 0.9 : 0.1);

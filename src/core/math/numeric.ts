@@ -41,6 +41,10 @@ export function findRoots(f: RealFn, a: number, b: number, samples = 2000): numb
   const roots: number[] = [];
   const step = (b - a) / samples;
   const tol = Math.max(1e-9, (b - a) * 1e-9);
+  /** "אפס" לצורך זיהוי קטע שבו הפונקציה מתאפסת לגמרי (למשל f−g כששתי הפונקציות זהות) */
+  const zero = (v: number) => Math.abs(v) < 1e-12;
+  /** קטעים שבהם הפונקציה אפס ברצף – אין בהם "נקודות" חיתוך */
+  const flat: [number, number][] = [];
   const add = (r: number) => {
     if (!finite(r) || r < a - tol || r > b + tol) return;
     const v = f(r);
@@ -55,7 +59,11 @@ export function findRoots(f: RealFn, a: number, b: number, samples = 2000): numb
     const x1 = a + i * step;
     const y1 = f(x1);
     if (finite(y0) && finite(y1)) {
-      if (y0 === 0) add(x0);
+      if (zero(y0) && zero(y1)) {
+        const last = flat[flat.length - 1];
+        if (last && Math.abs(last[1] - x0) < step * 0.5) last[1] = x1;
+        else flat.push([x0, x1]);
+      } else if (y0 === 0) add(x0);
       else if (Math.sign(y0) !== Math.sign(y1) && y1 !== 0) {
         const r = bisect(f, x0, x1);
         // החלפת סימן "אמיתית" ולא קפיצה (אסימפטוטה): הערך בשורש קטן
@@ -74,8 +82,16 @@ export function findRoots(f: RealFn, a: number, b: number, samples = 2000): numb
     y0 = y1;
   }
   if (finite(y0) && y0 === 0) add(x0);
-  return roots.sort((p, q) => p - q);
+  const inFlat = (r: number) => flat.some(([p, q]) => r >= p - step && r <= q + step);
+  // הגנה: פונקציה שמתנודדת מהר מאוד – לא יותר מ-MAX_ROOTS נקודות
+  return roots
+    .filter((r) => !inFlat(r))
+    .sort((p, q) => p - q)
+    .slice(0, MAX_ROOTS);
 }
+
+/** מספר מקסימלי של שורשים/חיתוכים שמוחזרים (מונע הצפה של הגרף) */
+export const MAX_ROOTS = 50;
 
 /** נקודות החיתוך של שתי פונקציות */
 export function intersections(

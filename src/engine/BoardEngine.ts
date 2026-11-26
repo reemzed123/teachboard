@@ -170,10 +170,9 @@ export class BoardEngine {
     this.on(h, 'contextmenu', (e) => e.preventDefault());
     this.on(window, 'keydown', (e) => this.onKey(e, true));
     this.on(window, 'keyup', (e) => this.onKey(e, false));
-    this.on(window, 'blur', () => {
-      this.spaceDown = false;
-      this.updateCursor();
-    });
+    // החלון איבד פוקוס (Alt+Tab, חלון אחר קפץ): העט/המגע עלולים לא לשלוח "הרמה" –
+    // משחררים הכול, כדי שלא יישאר קו או גרירה "תקועים".
+    this.on(window, 'blur', () => this.releaseAll());
 
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(h);
@@ -362,6 +361,21 @@ export class BoardEngine {
       if (cancelled) tool.cancel();
       else tool.up(this.sample(e, false));
     }
+  }
+
+  /** ביטול כל קלט שבתהליך (קו, גרירה, הזזת לוח, צביטה) */
+  releaseAll(): void {
+    this.spaceDown = false;
+    this.touches.clear();
+    const hadGesture = this.gesture !== null;
+    this.gesture = null;
+    const tool = this.activeTool;
+    this.activeTool = null;
+    this.activePointerId = null;
+    tool?.cancel();
+    // הזזת לוח/זום שהייתה בתהליך מוצגת זמנית בהזזת התמונה – מחזירים לציור רגיל
+    if (hadGesture) this.settleNow();
+    this.updateCursor();
   }
 
   private onWheel(e: WheelEvent) {

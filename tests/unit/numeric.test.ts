@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   findRoots,
+  MAX_ROOTS,
   formatNumber,
   intersections,
   niceStep,
@@ -48,5 +49,32 @@ describe('formatting and tables', () => {
     expect(niceStep(20)).toBe(2);
     expect(niceStep(100)).toBe(10);
     expect(niceStep(3)).toBe(0.5);
+  });
+});
+
+describe('root finding – edge cases', () => {
+  it('identical functions have no intersection points (not thousands)', () => {
+    expect(
+      intersections(
+        (x) => x,
+        (x) => x,
+        -10,
+        10,
+      ),
+    ).toEqual([]);
+    // חופפות רק בחלק מהתחום: אין נקודות בחלק החופף, אבל יש חיתוך אמיתי במקום אחר
+    const f = (x: number) => (x < 0 ? 0 : x * x - 4);
+    const roots = findRoots(f, -10, 10);
+    expect(roots.map((r) => Math.round(r * 1000) / 1000)).toEqual([2]);
+  });
+
+  it('no false roots at vertical asymptotes', () => {
+    expect(findRoots((x) => 1 / (x - Math.PI), -10, 10)).toEqual([]);
+    const tanRoots = findRoots(Math.tan, -4, 4).map((r) => Math.round(r * 1000) / 1000);
+    expect(tanRoots).toEqual([-3.142, 0, 3.142]);
+  });
+
+  it('fast oscillation returns at most MAX_ROOTS points', () => {
+    expect(findRoots((x) => Math.sin(40 * x), -10, 10, 4000).length).toBe(MAX_ROOTS);
   });
 });

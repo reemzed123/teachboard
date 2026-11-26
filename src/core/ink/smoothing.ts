@@ -27,8 +27,8 @@ interface Preset {
 const PRESETS: Record<SmoothingLevel, Preset | null> = {
   0: null,
   1: { minCutoff: 3.0, beta: 0.02, window: 1, hookLength: 4, pressureWindow: 2 },
-  2: { minCutoff: 1.6, beta: 0.012, window: 3, hookLength: 7, pressureWindow: 3 },
-  3: { minCutoff: 0.8, beta: 0.006, window: 6, hookLength: 10, pressureWindow: 5 },
+  2: { minCutoff: 1.6, beta: 0.012, window: 3, hookLength: 5, pressureWindow: 3 },
+  3: { minCutoff: 0.8, beta: 0.006, window: 6, hookLength: 7, pressureWindow: 5 },
 };
 
 // ---------- One Euro filter ----------
@@ -114,28 +114,38 @@ function angleBetween(ax: number, ay: number, bx: number, by: number): number {
  */
 function trimHook(pts: Triple[], maxLen: number): Triple[] {
   if (pts.length < 6) return pts;
+  const seg = (i: number) => Math.hypot(pts[i + 1]![0] - pts[i]![0], pts[i + 1]![1] - pts[i]![1]);
   // מוצאים את הנקודה האחרונה בתוך "אזור הוו"
   let len = 0;
   let k = 0;
   while (k + 1 < pts.length && len < maxLen) {
-    len += Math.hypot(pts[k + 1]![0] - pts[k]![0], pts[k + 1]![1] - pts[k]![1]);
+    len += seg(k);
     k++;
   }
   if (k < 1 || k + 2 >= pts.length) return pts;
-  // הכיוון של הוו מול הכיוון של המשך הקו (אותו אורך בערך)
+  // קו קצר ביחס לוו (סימנים קטנים כמו √ או 7) – לא נוגעים: הוו הוא חלק מהצורה
+  let total = len;
+  for (let i = k; i + 1 < pts.length; i++) total += seg(i);
+  if (total < maxLen * HOOK_MIN_RATIO) return pts;
+  // הכיוון של הוו מול הכיוון של המשך הקו (בערך כפול מאורכו)
   const hookDx = pts[k]![0] - pts[0]![0];
   const hookDy = pts[k]![1] - pts[0]![1];
   let m = k;
   let len2 = 0;
   while (m + 1 < pts.length && len2 < maxLen * 2) {
-    len2 += Math.hypot(pts[m + 1]![0] - pts[m]![0], pts[m + 1]![1] - pts[m]![1]);
+    len2 += seg(m);
     m++;
   }
   const mainDx = pts[m]![0] - pts[k]![0];
   const mainDy = pts[m]![1] - pts[k]![1];
-  if (len2 < maxLen) return pts; // קו קצר מדי – לא נוגעים
-  return angleBetween(hookDx, hookDy, mainDx, mainDy) > Math.PI / 2.2 ? pts.slice(k) : pts;
+  // רק "חזרה לאחור" ממש (וו של נחיתה/הרמה) – לא זווית חדה רגילה של אות
+  return angleBetween(hookDx, hookDy, mainDx, mainDy) > HOOK_MIN_ANGLE ? pts.slice(k) : pts;
 }
+
+/** וו נחתך רק בקו שארוך ממנו לפחות פי 5 */
+const HOOK_MIN_RATIO = 5;
+/** וו = תנועה כמעט הפוכה לכיוון הקו (יותר מ-120°) */
+const HOOK_MIN_ANGLE = (2 * Math.PI) / 3;
 
 /** ממוצע משוקלל (גאוסיאני) של כל נקודה עם שכנותיה; הקצוות נשארים במקום. */
 function smoothPositions(pts: Triple[], window: number): Triple[] {

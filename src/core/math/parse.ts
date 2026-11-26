@@ -289,7 +289,8 @@ class Parser {
       this.next();
       return { k: 'neg', a: this.exponent() };
     }
-    return this.postfix();
+    // חזקה במעריך מתפרשת מימין לשמאל: 2^3^2 = 2^(3^2)
+    return this.power();
   }
 
   private postfix(): Node {
@@ -400,7 +401,11 @@ class Parser {
 
 /** מנקה "y =" או "f(x) =" בתחילת הביטוי */
 function stripLhs(src: string): string {
-  const m = /^\s*(?:y|f\s*(?:\\left)?\(\s*x\s*(?:\\right)?\)|[a-z]\s*\(\s*x\s*\))\s*=/i.exec(src);
+  // y = …, f(x) = …, g(x) = …, וגם עם אינדקס: f_1(x) = …, f_{12}(x) = … (כמו ש-MathLive כותב)
+  const m =
+    /^\s*(?:y|[a-z](?:\s*_\s*(?:\{\s*[a-z0-9]+\s*\}|[a-z0-9]))?\s*(?:\\left)?\(\s*x\s*(?:\\right)?\))\s*=/i.exec(
+      src,
+    );
   return m ? src.slice(m[0].length) : src;
 }
 

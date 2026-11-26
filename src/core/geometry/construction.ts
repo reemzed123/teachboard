@@ -288,19 +288,29 @@ export function hitElement(
 ): GeoElement | null {
   let best: GeoElement | null = null;
   let bestD = Infinity;
+  let inside: GeoElement | null = null;
+  let insideArea = Infinity;
   for (const e of elements) {
     if (e.style.hidden) continue;
     const s = sol.get(e.id);
     if (!s || !matches(e, s, type)) continue;
-    let d = distanceTo(s, x, y) - (s.t === 'pt' ? tol : 0);
-    // לחיצה בתוך מצולע בוחרת אותו (בעדיפות נמוכה מצלעות ונקודות)
-    if (s.t === 'poly' && d > tol && pointInPolygon(s.pts, x, y)) d = tol * 0.99;
+    const d = distanceTo(s, x, y) - (s.t === 'pt' ? tol : 0);
+    // לחיצה בתוך מצולע בוחרת אותו (בעדיפות נמוכה מצלעות ונקודות);
+    // מצולע בתוך מצולע – הקטן (הפנימי) נבחר
+    if (s.t === 'poly' && d > tol && pointInPolygon(s.pts, x, y)) {
+      const area = polygonArea(s.pts);
+      if (area < insideArea) {
+        inside = e;
+        insideArea = area;
+      }
+      continue;
+    }
     if (d <= tol && d < bestD) {
       best = e;
       bestD = d;
     }
   }
-  return best;
+  return best ?? inside;
 }
 
 export function pointInPolygon(pts: readonly number[], x: number, y: number): boolean {
