@@ -14,6 +14,11 @@ import {
   type MathObject,
   type GraphObject,
   type TableObject,
+  type GeometryObject,
+  type GeoElement,
+  type GeoKind,
+  type GeoStyle,
+  type MeasureKind,
   type Transform,
   type PageBackground,
 } from '../document/types';
@@ -293,6 +298,100 @@ function cleanInk(v: Obj, id: string): InkObject | null {
   return withCommon(obj, v);
 }
 
+const GEO_KINDS = new Set([
+  'point',
+  'glider',
+  'midpoint',
+  'intersection',
+  'foot',
+  'segment',
+  'line',
+  'ray',
+  'parallel',
+  'perpendicular',
+  'perpBisector',
+  'angleBisector',
+  'circle',
+  'circleR',
+  'circle3',
+  'arc',
+  'ellipse',
+  'polygon',
+  'regularVertex',
+  'angle',
+  'measure',
+]);
+const MEASURES = new Set(['length', 'area', 'perimeter', 'radius', 'diameter']);
+
+function cleanGeometry(v: Obj, id: string): GeometryObject | null {
+  if (!Array.isArray(v.elements) || v.elements.length > 2000) return null;
+  const seen = new Set<string>();
+  const elements: GeoElement[] = [];
+  const C = LIMITS.coordinate;
+  for (const raw of v.elements) {
+    if (!isObj(raw) || typeof raw.id !== 'string' || !ID.test(raw.id) || seen.has(raw.id)) continue;
+    if (!GEO_KINDS.has(raw.kind as string)) continue;
+    const parents = Array.isArray(raw.parents) ? raw.parents : [];
+    // כל הורה חייב להופיע קודם (אחרת – הצעד וכל מה שתלוי בו מדולגים)
+    if (parents.length > 64 || !parents.every((p) => typeof p === 'string' && seen.has(p)))
+      continue;
+    const pr = isObj(raw.params) ? raw.params : {};
+    const params: GeoElement['params'] = {};
+    const x = num(pr.x, -C, C);
+    const y = num(pr.y, -C, C);
+    if (x !== null) params.x = x;
+    if (y !== null) params.y = y;
+    const idx = num(pr.index, 0, 1);
+    if (idx !== null) params.index = Math.round(idx);
+    const r = num(pr.r, 0.001, C);
+    if (r !== null) params.r = r;
+    const n = num(pr.n, 3, 50);
+    if (n !== null) params.n = Math.round(n);
+    const k = num(pr.k, 2, 50);
+    if (k !== null) params.k = Math.round(k);
+    if (MEASURES.has(pr.what as string)) params.what = pr.what as MeasureKind;
+    const st = isObj(raw.style) ? raw.style : {};
+    const style: GeoStyle = {
+      color: color(st.color) ?? '#1c2430',
+      width: num(st.width, 0, 50) ?? 2,
+    };
+    if (DASHES.includes(st.dash as LineDash)) style.dash = st.dash as LineDash;
+    const label = typeof st.label === 'string' ? cleanString(st.label, 20) : null;
+    if (label) style.label = label;
+    if (typeof st.showLabel === 'boolean') style.showLabel = st.showLabel;
+    for (const key of ['ticks', 'arrows', 'arcs'] as const) {
+      const val = num(st[key], 0, 3);
+      if (val !== null && val > 0) style[key] = Math.round(val);
+    }
+    if (st.fill === true) style.fill = true;
+    if (st.hidden === true) style.hidden = true;
+    seen.add(raw.id);
+    elements.push({
+      id: raw.id,
+      kind: raw.kind as GeoKind,
+      parents: parents as string[],
+      params,
+      style,
+    });
+  }
+  const ex = isObj(v.extent) ? v.extent : {};
+  return withCommon<GeometryObject>(
+    {
+      id,
+      type: 'geometry',
+      transform: cleanTransform(v.transform),
+      elements,
+      extent: {
+        x: num(ex.x, -C, C) ?? 0,
+        y: num(ex.y, -C, C) ?? 0,
+        width: num(ex.width, 0, C) ?? 0,
+        height: num(ex.height, 0, C) ?? 0,
+      },
+    },
+    v,
+  );
+}
+
 /** בודק לכל סוג אובייקט. סוג שלא מופיע כאן מדולג. */
 const CLEANERS: Record<string, (v: Obj, id: string) => BoardObject | null> = {
   ink: cleanInk,
@@ -301,6 +400,7 @@ const CLEANERS: Record<string, (v: Obj, id: string) => BoardObject | null> = {
   math: cleanMath,
   graph: cleanGraph,
   table: cleanTable,
+  geometry: cleanGeometry,
 };
 
 export interface ValidationReport {

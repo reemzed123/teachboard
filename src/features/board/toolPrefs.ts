@@ -1,10 +1,13 @@
 import type { SmoothingLevel } from '../../core/ink/smoothing';
 import type { LineDash } from '../../core/document/types';
+import { TOOL_SLOTS, type GeoToolId } from '../../core/geometry/tools';
+
+const GEO_TOOL_IDS = Object.keys(TOOL_SLOTS);
 
 // העדפות הכלים (צבע, עובי וכו') – נזכרות בין פתיחות של התוכנה.
 
 export type ToolId =
-  'select' | 'pen' | 'highlighter' | 'eraser' | 'hand' | 'text' | 'line' | 'arrow';
+  'select' | 'pen' | 'highlighter' | 'eraser' | 'hand' | 'text' | 'line' | 'arrow' | 'geometry';
 export type EraserMode = 'stroke' | 'area';
 
 export interface ToolPrefs {
@@ -20,6 +23,8 @@ export interface ToolPrefs {
   text: { fontSize: number; bold: boolean };
   /** סרגל הצבעים האישי של המורה */
   favorites: string[];
+  /** גיאומטריה: הכלי הנוכחי, צבע, מספר צלעות למצולע משוכלל, רדיוס (ס"מ) */
+  geo: { tool: GeoToolId; color: string; n: number; radiusCm: number };
 }
 
 export const TEXT_SIZES = [16, 24, 32, 48, 72] as const;
@@ -55,6 +60,7 @@ export function defaultToolPrefs(): ToolPrefs {
     shape: { dash: 'solid', arrowStart: false },
     text: { fontSize: 32, bold: false },
     favorites: [],
+    geo: { tool: 'point', color: '#1c2430', n: 4, radiusCm: 3 },
   };
 }
 
@@ -109,5 +115,13 @@ export function parseToolPrefs(raw: unknown): ToolPrefs {
           ),
         ].slice(0, MAX_FAVORITES)
       : d.favorites,
+    geo: {
+      tool: (GEO_TOOL_IDS as readonly string[]).includes(r.geo?.tool as string)
+        ? (r.geo!.tool as GeoToolId)
+        : d.geo.tool,
+      color: color(r.geo?.color, d.geo.color),
+      n: Math.round(clamp(r.geo?.n, 3, 12, d.geo.n)),
+      radiusCm: clamp(r.geo?.radiusCm, 0.1, 100, d.geo.radiusCm),
+    },
   };
 }

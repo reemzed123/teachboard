@@ -1200,6 +1200,51 @@ input[type='range'] {
   background: var(--tb-surface-2);
 }
 
+/* ===== גיאומטריה ===== */
+.tb-geo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.tb-geo-btn {
+  min-height: 36px;
+  padding: 4px;
+  border: 1px solid var(--tb-border);
+  border-radius: 8px;
+  background: var(--tb-surface);
+  cursor: pointer;
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.tb-geo-btn:hover {
+  background: var(--tb-surface-2);
+}
+
+.tb-geo-btn[aria-checked='true'] {
+  border-color: var(--tb-accent);
+  background: var(--tb-accent-soft);
+  color: var(--tb-accent);
+  font-weight: 600;
+}
+
+.tb-geo-hint {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--tb-accent-soft);
+  color: var(--tb-text);
+}
+
+.tb-input-small {
+  width: 80px;
+  margin: 0;
+}
+
+.tb-inspector .tb-swatches {
+  margin-block: 8px;
+}
+
 /* ===== חלון אישור ===== */
 .tb-dialog {
   max-width: min(420px, calc(100vw - 32px));

@@ -58,6 +58,8 @@ export class ObjectLayer {
 
   private isVisible(id: ObjectId, bounds: Rect): boolean {
     if (this.hidden.has(id)) return false;
+    // בנייה גיאומטרית יכולה לכלול ישרים "אינסופיים" – תמיד מציירים אותה
+    if (this.entries.get(id)?.obj.type === 'geometry') return true;
     return this.viewRect ? rectsIntersect(bounds, this.viewRect) : true;
   }
 

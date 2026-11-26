@@ -9,6 +9,8 @@ import {
 import type { ToolId } from '../features/board/toolPrefs';
 import { BackgroundLayer, type ImageSource } from './render/BackgroundLayer';
 import { onMathReady } from './render/mathCache';
+import { loadGeometryKernel, onGeometryReady } from './render/geoCache';
+import { geometrySelection } from './render/drawObject';
 import { ObjectLayer } from './render/ObjectLayer';
 import { LiveCanvas } from './render/LiveCanvas';
 import { EraserTool } from './tools/EraserTool';
@@ -16,6 +18,7 @@ import { InkTool } from './tools/InkTool';
 import { SelectTool } from './tools/SelectTool';
 import { ShapeTool } from './tools/ShapeTool';
 import { TextTool } from './tools/TextTool';
+import { GeometryTool } from './tools/GeometryTool';
 import type { InputPoint, PointerSample, ToolContext, ToolHandler } from './tools/types';
 import { fitRect, screenToBoard, visibleBoardRect, zoomAt } from './viewport';
 
@@ -79,6 +82,7 @@ export class BoardEngine {
     this.background = new BackgroundLayer(images);
     // נוסחה שסיימה להיטען – מציירים מחדש
     this.disposers.push(onMathReady(() => this.objects.layer.batchDraw()));
+    this.disposers.push(onGeometryReady(() => this.objects.layer.batchDraw()));
     const offImages = images?.onChange?.(() => this.renderView());
     if (offImages) this.disposers.push(offImages);
     host.classList.add('tb-board-host');
@@ -120,6 +124,7 @@ export class BoardEngine {
       line: new ShapeTool(ctx, 'line'),
       arrow: new ShapeTool(ctx, 'arrow'),
       text: new TextTool(ctx),
+      geometry: new GeometryTool(ctx),
     };
 
     this.view = store.getState().view;
@@ -199,6 +204,14 @@ export class BoardEngine {
       this.activePointerId = null;
       if (prev.tool !== 'hand') this.tools[prev.tool].hover?.(null);
       this.toolCursor = null;
+      // מנוע הגיאומטריה נטען רק כשבוחרים בכלי (לא בכל הפעלה של התוכנה)
+      if (s.tool === 'geometry') void loadGeometryKernel();
+      if (prev.tool === 'geometry') {
+        // יוצאים מהגיאומטריה: מבטלים הדגשות
+        geometrySelection.clear();
+        s.setGeoSelection(null);
+        this.objects.layer.batchDraw();
+      }
       this.updateCursor();
       this.requestOverlay();
     }

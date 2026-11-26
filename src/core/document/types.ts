@@ -132,8 +132,77 @@ export interface TableObject extends ObjectBase {
   cellHeight: number;
 }
 
+// ---------- גיאומטריה דינמית ----------
+
+export type GeoKind =
+  | 'point' // נקודה חופשית (params.x, params.y)
+  | 'glider' // נקודה על ישר/מעגל [path] (params.x, params.y – מיקום מבוקש)
+  | 'midpoint' // [A, B]
+  | 'intersection' // [e1, e2] (params.index)
+  | 'foot' // עקב אנך [P, line]
+  | 'segment' // [A, B]
+  | 'line' // [A, B]
+  | 'ray' // [A, B]
+  | 'parallel' // [line, P]
+  | 'perpendicular' // [line, P]
+  | 'perpBisector' // [A, B]
+  | 'angleBisector' // [A, B, C] – בקודקוד B
+  | 'circle' // [מרכז, נקודה על המעגל]
+  | 'circleR' // [מרכז] (params.r)
+  | 'circle3' // [A, B, C]
+  | 'arc' // [מרכז, התחלה, סוף]
+  | 'ellipse' // [מוקד, מוקד, נקודה]
+  | 'polygon' // [P1..Pn]
+  | 'regularVertex' // קודקוד של מצולע משוכלל [A, B] (params.n, params.k)
+  | 'angle' // סימון/מדידת זווית [A, B, C] – בקודקוד B
+  | 'measure'; // מדידה [אובייקט] (params.what)
+
+export type MeasureKind = 'length' | 'area' | 'perimeter' | 'radius' | 'diameter';
+
+export interface GeoStyle {
+  color: string;
+  width: number;
+  dash?: LineDash;
+  /** שם (A, B, a...) */
+  label?: string;
+  showLabel?: boolean;
+  /** סימון קטעים שווים: 1–3 קווקווים */
+  ticks?: number;
+  /** סימון מקבילים: 1–2 חצים */
+  arrows?: number;
+  /** סימון זוויות שוות: 1–3 קשתות */
+  arcs?: number;
+  /** מילוי שקוף למצולע/מעגל */
+  fill?: boolean;
+  hidden?: boolean;
+}
+
+export interface GeoElement {
+  id: string;
+  kind: GeoKind;
+  parents: string[];
+  params?: {
+    x?: number;
+    y?: number;
+    index?: number;
+    r?: number;
+    n?: number;
+    k?: number;
+    what?: MeasureKind;
+  };
+  style: GeoStyle;
+}
+
+/** בנייה גיאומטרית: רשימת צעדים, שהמיקומים שלהם מחושבים מחדש בכל גרירה. */
+export interface GeometryObject extends ObjectBase {
+  type: 'geometry';
+  elements: GeoElement[];
+  /** המלבן של החלקים הסופיים (נקודות, קטעים, מעגלים) – לבחירה ולגבולות */
+  extent: { x: number; y: number; width: number; height: number };
+}
+
 export type BoardObject =
-  InkObject | ShapeObject | TextObject | MathObject | GraphObject | TableObject;
+  InkObject | ShapeObject | TextObject | MathObject | GraphObject | TableObject | GeometryObject;
 
 /** עמוד מחברת (עם גבולות) או לוח אינסופי. המעבר ביניהם לא מוחק תוכן. */
 export type PageLayout = 'bounded' | 'infinite';

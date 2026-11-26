@@ -72,6 +72,10 @@ export interface BoardState extends DocState {
   startTextEdit(edit: { id: string | null; x: number; y: number }): void;
   endTextEdit(): void;
 
+  /** אלמנטים נבחרים בתוך בנייה גיאומטרית (לעריכת מאפיינים) */
+  geoSelection: { objectId: string; ids: string[] } | null;
+  setGeoSelection(sel: { objectId: string; ids: string[] } | null): void;
+
   /** עורך הנוסחאות: נוסחה קיימת (id) או חדשה (null) */
   formulaEdit: { id: string | null } | null;
   openFormula(id: string | null): void;
@@ -210,6 +214,11 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
       },
       endTextEdit() {
         set({ textEdit: null });
+      },
+
+      geoSelection: null,
+      setGeoSelection(sel) {
+        set({ geoSelection: sel });
       },
 
       formulaEdit: null,

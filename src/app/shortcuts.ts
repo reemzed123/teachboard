@@ -29,6 +29,7 @@ const BINDINGS: Binding[] = [
   { code: 'KeyT', action: 'tool.text' },
   { code: 'KeyL', action: 'tool.line' },
   { code: 'KeyA', action: 'tool.arrow' },
+  { code: 'KeyG', action: 'tool.geometry' },
   { code: 'Equal', ctrl: true, action: 'view.zoomIn' },
   { code: 'NumpadAdd', ctrl: true, action: 'view.zoomIn' },
   { code: 'Minus', ctrl: true, action: 'view.zoomOut' },

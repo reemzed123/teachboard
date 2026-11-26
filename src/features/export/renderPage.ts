@@ -5,6 +5,7 @@ import { objectBounds } from '../../core/objects/geometry';
 import { drawPageBackground, type ImageSource } from '../../engine/render/BackgroundLayer';
 import { drawObjectWorld } from '../../engine/render/drawObject';
 import { ensureMathImages } from '../../engine/render/mathCache';
+import { loadGeometryKernel } from '../../engine/render/geoCache';
 
 // ציור עמוד שלם על משטח נפרד – לתמונות ממוזערות ולייצוא תמונה.
 
@@ -27,6 +28,8 @@ export async function prepareMath(pages: readonly Page[]): Promise<void> {
     p.objects.filter((o) => o.type === 'math').map((o) => ({ latex: o.latex, color: o.color })),
   );
   if (items.length) await ensureMathImages(items);
+  // בנייה גיאומטרית – טוענים את מנוע החישוב לפני הציור
+  if (pages.some((p) => p.objects.some((o) => o.type === 'geometry'))) await loadGeometryKernel();
 }
 
 export function drawObjects(ctx: CanvasRenderingContext2D, page: Page): void {

@@ -11,6 +11,7 @@ import {
   Minus,
   Scissors,
   SendToBack,
+  Triangle,
   Type,
   Ungroup,
   Expand,
@@ -104,6 +105,7 @@ export const ACTIONS: Record<QuickActionId, ActionDef> = {
   'tool.text': toolAction('tool.text', 'text', 'tool.text', Type, 'T'),
   'tool.line': toolAction('tool.line', 'line', 'tool.line', Minus, 'L'),
   'tool.arrow': toolAction('tool.arrow', 'arrow', 'tool.arrow', ArrowUpRight, 'A'),
+  'tool.geometry': toolAction('tool.geometry', 'geometry', 'tool.geometry', Triangle, 'G'),
   'edit.duplicate': selectionAction('edit.duplicate', CopyPlus, 'Ctrl+D', (s) =>
     s.duplicateSelection(),
   ),

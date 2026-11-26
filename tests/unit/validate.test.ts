@@ -233,3 +233,48 @@ describe('validate math, graph and table', () => {
     expect(report.skippedObjects).toBe(1);
   });
 });
+
+describe('validate geometry constructions', () => {
+  it('keeps valid steps and drops steps that refer to missing or later elements', () => {
+    const out = validateDocument(
+      docWith([
+        {
+          id: 'g',
+          type: 'geometry',
+          extent: { x: 0, y: 0, width: 100, height: 100 },
+          elements: [
+            {
+              id: 'A',
+              kind: 'point',
+              parents: [],
+              params: { x: 0, y: 0 },
+              style: { color: '#000000', width: 2, label: 'A' },
+            },
+            {
+              id: 'B',
+              kind: 'point',
+              parents: [],
+              params: { x: 10, y: 0 },
+              style: { color: '#000000', width: 2 },
+            },
+            {
+              id: 's',
+              kind: 'segment',
+              parents: ['A', 'B'],
+              style: { color: '#000000', width: 2, ticks: 2 },
+            },
+            { id: 'bad', kind: 'segment', parents: ['A', 'Z'], style: {} },
+            { id: 'later', kind: 'midpoint', parents: ['A', 'C'], style: {} },
+            { id: 'C', kind: 'point', parents: [], params: { x: 5, y: 5 }, style: {} },
+            { id: 'evil', kind: 'script', parents: [], style: {} },
+          ],
+        },
+      ]),
+    );
+    const g = out.pages[0]!.objects[0] as unknown as {
+      elements: { id: string; style: { ticks?: number } }[];
+    };
+    expect(g.elements.map((e) => e.id)).toEqual(['A', 'B', 's', 'C']);
+    expect(g.elements[2]!.style.ticks).toBe(2);
+  });
+});

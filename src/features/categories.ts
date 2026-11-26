@@ -16,7 +16,7 @@ export interface CategoryDef {
 export const CATEGORIES: readonly CategoryDef[] = [
   { id: 'drawing', labelKey: 'category.drawing', plannedPhase: 2, available: true },
   { id: 'math', labelKey: 'category.math', plannedPhase: 4, available: true },
-  { id: 'geometry', labelKey: 'category.geometry', plannedPhase: 5 },
+  { id: 'geometry', labelKey: 'category.geometry', plannedPhase: 5, available: true },
   { id: 'pdf', labelKey: 'category.pdf', plannedPhase: 6 },
   { id: 'teaching', labelKey: 'category.teaching', plannedPhase: 7 },
   { id: 'templates', labelKey: 'category.templates', plannedPhase: 3, available: true },

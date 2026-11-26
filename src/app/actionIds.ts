@@ -9,6 +9,7 @@ export const QUICK_ACTION_IDS = [
   'tool.text',
   'tool.line',
   'tool.arrow',
+  'tool.geometry',
   'edit.undo',
   'edit.redo',
   'edit.deleteSelection',

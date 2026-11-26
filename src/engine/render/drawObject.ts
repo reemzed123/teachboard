@@ -8,6 +8,7 @@ import type {
 import { arrowHeadSize } from '../../core/objects/geometry';
 import { outlinePath } from './inkOutline';
 import { drawGraph, drawTable } from './drawGraph';
+import { drawGeometry } from './drawGeometry';
 import { getMathImage } from './mathCache';
 
 // ציור אובייקט על canvas. אותו קוד משמש את המסך, ייצוא התמונה והתמונות הממוזערות –
@@ -107,8 +108,14 @@ export function drawObjectLocal(ctx: CanvasRenderingContext2D, o: BoardObject): 
     case 'table':
       drawTable(ctx, o);
       break;
+    case 'geometry':
+      drawGeometry(ctx, o, geometrySelection.get(o.id));
+      break;
   }
 }
+
+/** אלמנטים מודגשים בבנייה (כלי הגיאומטריה מעדכן) */
+export const geometrySelection = new Map<string, ReadonlySet<string>>();
 
 export function objectOpacity(o: BoardObject): number {
   return o.type === 'ink' || o.type === 'shape' ? o.style.opacity : 1;

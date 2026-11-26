@@ -52,5 +52,12 @@ test('works fully offline after the first visit', async ({ page, context }) => {
   await page.getByRole('button', { name: 'הוספה ללוח' }).click();
   await expect(page.getByTestId('board')).toHaveAttribute('data-object-count', '2');
 
+  // גיאומטריה – מנוע החישוב נטען מהמחשב, בלי אינטרנט
+  await page.getByRole('button', { name: 'גיאומטריה' }).click();
+  await page.locator('[data-geo-tool="segment"]').click();
+  await page.mouse.click(box.x + 150, box.y + 420);
+  await page.mouse.click(box.x + 350, box.y + 420);
+  await expect(page.getByTestId('board')).toHaveAttribute('data-object-count', '3');
+
   await context.setOffline(false);
 });

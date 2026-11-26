@@ -13,6 +13,7 @@ import { Toast } from '../ui/Toast';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { t } from '../i18n';
 import { MathPanel } from '../ui/MathPanel';
+import { GeometryPanel } from '../ui/GeometryPanel';
 import { FormulaDialog } from '../ui/FormulaDialog';
 import { handleShortcut } from './shortcuts';
 import { useApp, useRuntime } from './StoreContext';
@@ -85,6 +86,7 @@ export function App() {
             {category?.id === 'templates' && <TemplatesPanel />}
             {category?.id === 'files' && <FilesPanel />}
             {category?.id === 'math' && <MathPanel />}
+            {category?.id === 'geometry' && <GeometryPanel />}
             {category && !category.available && <CategoryPanel category={category} />}
           </ErrorBoundary>
         )}

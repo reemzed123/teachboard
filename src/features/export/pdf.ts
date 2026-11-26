@@ -11,6 +11,7 @@ import {
 import { generatePattern, LINE_WIDTH_PX, patternColors } from '../../core/background/pattern';
 import type {
   BoardDocument,
+  GeometryObject,
   GraphObject,
   MathObject,
   Page,
@@ -217,7 +218,7 @@ function drawPdfShape(out: PDFPage, o: ShapeObject, base: PdfBase) {
 async function drawPdfRaster(
   pdf: PDFDocument,
   out: PDFPage,
-  o: TextObject | MathObject | GraphObject | TableObject,
+  o: TextObject | MathObject | GraphObject | TableObject | GeometryObject,
   X: (x: number) => number,
   Y: (y: number) => number,
   k: number,

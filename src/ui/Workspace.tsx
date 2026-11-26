@@ -36,7 +36,9 @@ export function Workspace() {
       const app = rt.app.getState();
       if (!app.settings.autoClosePanel || !app.openPanel) return;
       if (e.pointerType === 'mouse' && e.button !== 0) return;
-      if (rt.board.getState().tool === 'hand') return;
+      const tool = rt.board.getState().tool;
+      // הזזת הלוח לא סוגרת; וגם לא בגיאומטריה – החלונית מציגה הנחיות ומאפייני האלמנט
+      if (tool === 'hand' || tool === 'geometry') return;
       app.closePanel();
     };
     host.addEventListener('pointerdown', onBoardPointerDown);

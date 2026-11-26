@@ -4,6 +4,7 @@ import type { AppRuntime } from './runtime';
 import { unionRects } from '../core/geometry/rect';
 import { objectBounds } from '../core/objects/geometry';
 import { currentPage } from '../features/board/boardStore';
+import { solveNow } from '../engine/render/geoCache';
 
 // כלי בדיקה בלבד: זמינים רק כשהכתובת כוללת ‎?debug=1 (לבדיקות ביצועים אוטומטיות).
 // לא משנים מידע של המשתמש מעבר למה שהבדיקה מבקשת במפורש.
@@ -52,6 +53,16 @@ export function installDebugHooks(rt: AppRuntime): () => void {
         width: b.width * v.scale,
         height: b.height * v.scale,
       };
+    },
+    /** הפתרון (מיקומים) של הבנייה הגיאומטרית בעמוד – לבדיקות */
+    async geoSolution() {
+      const s = rt.board.getState();
+      const g = currentPage(s).objects.find((o) => o.type === 'geometry');
+      if (!g || g.type !== 'geometry') return null;
+      const sol = await solveNow(g);
+      return Object.fromEntries(
+        g.elements.map((e) => [e.style.label ?? e.id, { kind: e.kind, ...sol.get(e.id) }]),
+      );
     },
     runtime: rt,
   };
