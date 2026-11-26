@@ -1498,3 +1498,12 @@ input:focus-visible {
     animation-duration: 1ms;
   }
 }
+
+.tb-geo-error {
+  color: var(--tb-danger, #dc2626);
+}
+
+.tb-geo-dim {
+  display: flex;
+  justify-content: space-between;
+}

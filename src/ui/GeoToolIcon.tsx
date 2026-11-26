@@ -58,11 +58,51 @@ const ICONS: Record<GeoToolId, ReactNode> = {
       <path d="M12 3 L20.5 9.2 L17.3 19.2 L6.7 19.2 L3.5 9.2 Z" fill="none" />
     </>
   ),
+  shape: (
+    <>
+      <path d="M3 20 L10 20 L6.5 13 Z" fill="none" />
+      <path d="M13 20 L21 20 L21 13 L13 13 Z" fill="none" />
+      <path d="M8 4 L12 8 L8 12 L4 8 Z" fill="none" />
+      <path d="M14.5 10 L19.5 10 L21 5 L16 5 Z" fill="none" />
+    </>
+  ),
   circle: (
     <>
       <circle cx={12} cy={12} r={8} fill="none" />
       {P(12, 12)}
       {P(19.6, 9.5)}
+    </>
+  ),
+  chord: (
+    <>
+      <circle cx={12} cy={12} r={8} fill="none" />
+      <path d="M5.1 16 L18.9 16" />
+      {P(5.1, 16)}
+      {P(18.9, 16)}
+    </>
+  ),
+  radius: (
+    <>
+      <circle cx={12} cy={12} r={8} fill="none" />
+      <path d="M12 12 L17.7 6.3" />
+      {P(12, 12)}
+      {P(17.7, 6.3)}
+    </>
+  ),
+  centralAngle: (
+    <>
+      <circle cx={12} cy={12} r={8} fill="none" />
+      <path d="M4.5 14.7 L12 12 L19.5 14.7" fill="none" />
+      <path d="M8.2 13.4 A 4 4 0 0 0 15.8 13.4" fill="none" strokeWidth={1.1} />
+      {P(12, 12)}
+    </>
+  ),
+  inscribedAngle: (
+    <>
+      <circle cx={12} cy={12} r={8} fill="none" />
+      <path d="M5.4 16.5 L12 4 L18.6 16.5" fill="none" />
+      <path d="M10.6 6.7 A 3 3 0 0 0 13.4 6.7" fill="none" strokeWidth={1.1} />
+      {P(12, 4)}
     </>
   ),
   circleR: (

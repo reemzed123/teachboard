@@ -7,13 +7,17 @@ import { t } from '../i18n';
 import type { MessageKey } from '../i18n/he';
 import { SidePanel } from './SidePanel';
 import { GeoToolIcon } from './GeoToolIcon';
+import { GeoShapeOptions } from './GeoShapeOptions';
+import { GeoPolygonDecorations } from './GeoPolygonDecorations';
+import { MAX_POLYGON_SIDES } from '../features/board/toolPrefs';
 
 const GROUPS: { key: MessageKey; tools: GeoToolId[] }[] = [
   {
     key: 'geo.group.basic',
-    tools: ['move', 'point', 'segment', 'line', 'ray', 'polygon', 'regularPolygon'],
+    tools: ['move', 'point', 'segment', 'line', 'ray', 'polygon', 'regularPolygon', 'shape'],
   },
   { key: 'geo.group.curves', tools: ['circle', 'circleR', 'circle3', 'arc', 'ellipse'] },
+  { key: 'geo.group.circle', tools: ['chord', 'radius', 'centralAngle', 'inscribedAngle'] },
   {
     key: 'geo.group.construct',
     tools: [
@@ -54,38 +58,17 @@ export function GeometryPanel() {
           {t(`geo.hint.${geo.tool}` as MessageKey)}
         </p>
       )}
-      {GROUPS.map((g) => (
-        <fieldset key={g.key} className="tb-field">
-          <legend>{t(g.key)}</legend>
-          <div className="tb-geo-grid" role="radiogroup" aria-label={t(g.key)}>
-            {g.tools.map((id) => (
-              <button
-                key={id}
-                type="button"
-                role="radio"
-                className="tb-geo-btn"
-                aria-checked={active && geo.tool === id}
-                onClick={() => pick(id)}
-                data-geo-tool={id}
-              >
-                <GeoToolIcon tool={id} />
-                <span>{t(`geo.tool.${id}` as MessageKey)}</span>
-              </button>
-            ))}
-          </div>
-        </fieldset>
-      ))}
-
       {active && geo.tool === 'regularPolygon' && (
         <label className="tb-select-inline">
           {t('geo.sides')}
           <select
+            data-testid="geo-sides"
             value={geo.n}
             onChange={(e) =>
               updatePrefs((p) => ({ ...p, geo: { ...p.geo, n: Number(e.target.value) } }))
             }
           >
-            {[3, 4, 5, 6, 7, 8, 10, 12].map((n) => (
+            {Array.from({ length: MAX_POLYGON_SIDES - 2 }, (_, i) => i + 3).map((n) => (
               <option key={n} value={n}>
                 {n}
               </option>
@@ -109,6 +92,29 @@ export function GeometryPanel() {
           />
         </label>
       )}
+
+      {active && geo.tool === 'shape' && <GeoShapeOptions />}
+      {GROUPS.map((g) => (
+        <fieldset key={g.key} className="tb-field">
+          <legend>{t(g.key)}</legend>
+          <div className="tb-geo-grid" role="radiogroup" aria-label={t(g.key)}>
+            {g.tools.map((id) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                className="tb-geo-btn"
+                aria-checked={active && geo.tool === id}
+                onClick={() => pick(id)}
+                data-geo-tool={id}
+              >
+                <GeoToolIcon tool={id} />
+                <span>{t(`geo.tool.${id}` as MessageKey)}</span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      ))}
 
       <fieldset className="tb-field">
         <legend>{t('geo.newColor')}</legend>
@@ -188,6 +194,7 @@ function ElementInspector() {
           {t('geo.name')}
           <input
             className="tb-input tb-input-small"
+            key={el.id}
             defaultValue={el.style.label ?? ''}
             maxLength={8}
             dir="ltr"
@@ -286,6 +293,47 @@ function ElementInspector() {
           </select>
         </label>
       )}
+      {el.kind === 'arc' && (
+        <label className="tb-check">
+          <input
+            type="checkbox"
+            checked={el.style.showLabel === true}
+            onChange={(e) => update({ showLabel: e.target.checked })}
+          />
+          {t('geo.showArcDegrees')}
+        </label>
+      )}
+      {(el.kind === 'angle' || isSegment || el.kind === 'arc') && (
+        <>
+          <label className="tb-select-inline">
+            {t('geo.text')}
+            <input
+              key={el.id}
+              className="tb-input tb-input-small"
+              data-testid="geo-text"
+              defaultValue={el.style.text ?? ''}
+              maxLength={40}
+              dir="ltr"
+              onBlur={(e) =>
+                e.target.value.trim() !== (el.style.text ?? '') &&
+                update({ text: e.target.value.trim() || undefined })
+              }
+              onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+            />
+          </label>
+          {el.style.text && (
+            <label className="tb-check">
+              <input
+                type="checkbox"
+                checked={!!el.style.showValue}
+                onChange={(e) => update({ showValue: e.target.checked || undefined })}
+              />
+              {t('geo.showValueToo')}
+            </label>
+          )}
+        </>
+      )}
+      {el.kind === 'polygon' && <GeoPolygonDecorations obj={obj} poly={el} />}
       {fillable && (
         <label className="tb-check">
           <input

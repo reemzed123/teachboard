@@ -1,6 +1,13 @@
 import type { SmoothingLevel } from '../../core/ink/smoothing';
 import type { LineDash } from '../../core/document/types';
 import { TOOL_SLOTS, type GeoToolId } from '../../core/geometry/tools';
+import {
+  DEFAULT_DIMS,
+  SHAPE_IDS,
+  type DimKey,
+  type ShapeDims,
+  type ShapeId,
+} from '../../core/geometry/shapes';
 
 const GEO_TOOL_IDS = Object.keys(TOOL_SLOTS);
 
@@ -24,8 +31,17 @@ export interface ToolPrefs {
   /** סרגל הצבעים האישי של המורה */
   favorites: string[];
   /** גיאומטריה: הכלי הנוכחי, צבע, מספר צלעות למצולע משוכלל, רדיוס (ס"מ) */
-  geo: { tool: GeoToolId; color: string; n: number; radiusCm: number };
+  geo: {
+    tool: GeoToolId;
+    color: string;
+    n: number;
+    radiusCm: number;
+    /** צורה ידועה: הסוג, המידות (ס"מ / מעלות), וגודל קבוע או חופשי */
+    shape: { id: ShapeId; dims: ShapeDims; fixed: boolean };
+  };
 }
+
+export const MAX_POLYGON_SIDES = 20;
 
 export const TEXT_SIZES = [16, 24, 32, 48, 72] as const;
 export const MAX_FAVORITES = 12;
@@ -60,7 +76,13 @@ export function defaultToolPrefs(): ToolPrefs {
     shape: { dash: 'solid', arrowStart: false },
     text: { fontSize: 32, bold: false },
     favorites: [],
-    geo: { tool: 'point', color: '#1c2430', n: 4, radiusCm: 3 },
+    geo: {
+      tool: 'point',
+      color: '#1c2430',
+      n: 5,
+      radiusCm: 3,
+      shape: { id: 'rectangle', dims: { ...DEFAULT_DIMS }, fixed: true },
+    },
   };
 }
 
@@ -120,8 +142,23 @@ export function parseToolPrefs(raw: unknown): ToolPrefs {
         ? (r.geo!.tool as GeoToolId)
         : d.geo.tool,
       color: color(r.geo?.color, d.geo.color),
-      n: Math.round(clamp(r.geo?.n, 3, 12, d.geo.n)),
+      n: Math.round(clamp(r.geo?.n, 3, MAX_POLYGON_SIDES, d.geo.n)),
       radiusCm: clamp(r.geo?.radiusCm, 0.1, 100, d.geo.radiusCm),
+      shape: parseShape(r.geo?.shape, d.geo.shape),
     },
+  };
+}
+
+function parseShape(raw: unknown, d: ToolPrefs['geo']['shape']): ToolPrefs['geo']['shape'] {
+  if (typeof raw !== 'object' || raw === null) return d;
+  const r = raw as { id?: unknown; dims?: Record<string, unknown>; fixed?: unknown };
+  const dims = { ...d.dims };
+  for (const k of Object.keys(dims) as DimKey[]) {
+    dims[k] = clamp(r.dims?.[k], 0.1, k === 'angle' ? 179 : 100, d.dims[k]);
+  }
+  return {
+    id: (SHAPE_IDS as readonly unknown[]).includes(r.id) ? (r.id as ShapeId) : d.id,
+    dims,
+    fixed: typeof r.fixed === 'boolean' ? r.fixed : d.fixed,
   };
 }

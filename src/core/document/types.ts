@@ -154,6 +154,7 @@ export type GeoKind =
   | 'ellipse' // [מוקד, מוקד, נקודה]
   | 'polygon' // [P1..Pn]
   | 'regularVertex' // קודקוד של מצולע משוכלל [A, B] (params.n, params.k)
+  | 'relPoint' // נקודה יחסית לבסיס AB: A + u·AB + v·(AB מסובב 90°) – לצורות ששומרות על חוקיהן
   | 'angle' // סימון/מדידת זווית [A, B, C] – בקודקוד B
   | 'measure'; // מדידה [אובייקט] (params.what)
 
@@ -175,6 +176,12 @@ export interface GeoStyle {
   /** מילוי שקוף למצולע/מעגל */
   fill?: boolean;
   hidden?: boolean;
+  /** טקסט להצגה במקום/בנוסף לערך המחושב (למשל x+3 לזווית) */
+  text?: string;
+  /** להציג גם את הערך המחושב כשיש טקסט */
+  showValue?: boolean;
+  /** סימון פנימי: אלמנט שנוצר אוטומטית עבור מצולע (למשל אלכסונים) – "<id>:<סוג>" */
+  tag?: string;
 }
 
 export interface GeoElement {
@@ -188,6 +195,8 @@ export interface GeoElement {
     r?: number;
     n?: number;
     k?: number;
+    u?: number;
+    v?: number;
     what?: MeasureKind;
   };
   style: GeoStyle;

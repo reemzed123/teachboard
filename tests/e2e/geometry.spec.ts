@@ -161,3 +161,137 @@ test('element properties: equal-segment ticks, hide; construction saved and expo
   ]);
   expect((await PDFDocument.load(await readFile((await pdf.path())!))).getPageCount()).toBe(1);
 });
+
+const CM = 96 / 2.54;
+const d = (p: any, q: any) => Math.hypot(q.x - p.x, q.y - p.y);
+
+test('regular polygon up to 20 sides; options shown at the top of the panel', async ({ page }) => {
+  await tool(page, 'regularPolygon');
+  const sides = page.getByTestId('geo-sides');
+  await expect(sides.locator('option')).toHaveCount(18);
+  // האפשרויות מופיעות לפני רשימת הכלים
+  const sidesBox = (await sides.boundingBox())!;
+  const firstTool = (await page.locator('[data-geo-tool="move"]').boundingBox())!;
+  expect(sidesBox.y).toBeLessThan(firstTool.y);
+  await sides.selectOption('8');
+  await click(page, 300, 450);
+  await click(page, 380, 450);
+  const sol = await solution(page);
+  const poly = Object.values(sol).find((e: any) => e.kind === 'polygon') as any;
+  expect(poly.pts.length / 2).toBe(8);
+});
+
+test('known shape: rectangle by size keeps its size (fixed) and its rules (free)', async ({
+  page,
+}) => {
+  await tool(page, 'shape');
+  const opts = page.getByTestId('geo-shape-options');
+  await page.getByTestId('geo-shape-select').selectOption('rectangle');
+  await opts.locator('[data-dim="a"]').fill('5');
+  await opts.locator('[data-dim="b"]').fill('2');
+  await click(page, 200, 450);
+  let sol = await solution(page);
+  expect(d(sol.A, sol.B) / CM).toBeCloseTo(5, 1);
+  expect(d(sol.B, sol.C) / CM).toBeCloseTo(2, 1);
+
+  // גודל קבוע: גרירת B רק מסובבת
+  await tool(page, 'move');
+  await drag(page, sol.B.x, sol.B.y, sol.B.x, sol.B.y - 100);
+  sol = await solution(page);
+  expect(d(sol.A, sol.B) / CM).toBeCloseTo(5, 1);
+  expect(d(sol.A, sol.C)).toBeCloseTo(d(sol.B, sol.D), 3); // עדיין מלבן
+
+  // אי אפשר לבנות משולש בלתי אפשרי – ומוצג הסבר
+  await tool(page, 'shape');
+  await page.getByTestId('geo-shape-select').selectOption('triSSS');
+  await opts.locator('[data-dim="a"]').fill('1');
+  await opts.locator('[data-dim="b"]').fill('1');
+  await opts.locator('[data-dim="c"]').fill('5');
+  await expect(page.getByTestId('geo-shape-error')).toBeVisible();
+
+  // גודל משתנה: מעוין נשאר מעוין גם כשמגדילים
+  await page.getByTestId('geo-shape-select').selectOption('rhombus');
+  await opts.locator('[data-dim="a"]').fill('3');
+  await opts.locator('[data-dim="angle"]').fill('60');
+  await opts.getByRole('radio', { name: /גודל משתנה/ }).check();
+  await click(page, 600, 300);
+  sol = await solution(page);
+  const [E, F, G, H] = [sol.E, sol.F, sol.G, sol.H];
+  expect(d(E, F) / CM).toBeCloseTo(3, 1);
+  await tool(page, 'move');
+  await drag(page, F.x, F.y, F.x + 60, F.y);
+  sol = await solution(page);
+  const side = d(sol.E, sol.F);
+  expect(side / CM).toBeGreaterThan(4);
+  expect(d(sol.F, sol.G)).toBeCloseTo(side, 3);
+  expect(d(sol.G, sol.H)).toBeCloseTo(side, 3);
+  expect(G && H).toBeTruthy();
+});
+
+test('polygon decorations: medians and angles on a triangle, turned on and off', async ({
+  page,
+}) => {
+  await triangle(page);
+  await tool(page, 'move');
+  await click(page, 280, 380); // בתוך המשולש
+  const deco = page.getByTestId('geo-decorations');
+  await expect(deco).toBeVisible();
+  await deco.locator('[data-deco="medians"]').check();
+  let sol = await solution(page);
+  const mids = Object.values(sol).filter((e: any) => e.kind === 'midpoint');
+  expect(mids).toHaveLength(3);
+  await deco.locator('[data-deco="angles"]').check();
+  sol = await solution(page);
+  const angles = Object.values(sol).filter((e: any) => e.kind === 'angle') as any[];
+  expect(angles.reduce((s, a) => s + a.deg, 0)).toBeCloseTo(180, 3);
+  await deco.locator('[data-deco="medians"]').uncheck();
+  sol = await solution(page);
+  expect(Object.values(sol).filter((e: any) => e.kind === 'midpoint')).toHaveLength(0);
+});
+
+test('central and inscribed angles on a circle; algebraic label for an angle', async ({ page }) => {
+  await tool(page, 'circle');
+  await click(page, 400, 350);
+  await click(page, 550, 350);
+  await tool(page, 'centralAngle');
+  await click(page, 400, 200); // המעגל (למעלה)
+  await click(page, 250, 350); // נקודה על המעגל
+  await click(page, 400, 500); // נקודה על המעגל
+  let sol = await solution(page);
+  const central = Object.values(sol).find((e: any) => e.kind === 'angle') as any;
+  expect(central.deg).toBeCloseTo(90, 0);
+
+  await tool(page, 'inscribedAngle');
+  await click(page, 506, 244); // המעגל
+  await click(page, 506, 244); // קודקוד על המעגל
+  await click(page, 250, 350); // נקודה קיימת C
+  await click(page, 400, 500); // נקודה קיימת D
+  sol = await solution(page);
+  const angles = Object.values(sol).filter((e: any) => e.kind === 'angle') as any[];
+  expect(angles).toHaveLength(2);
+  // זווית היקפית = חצי מהמרכזית הנשענת על אותה קשת
+  expect(angles[1].deg).toBeCloseTo(45, 0);
+
+  // ביטוי אלגברי לזווית
+  await tool(page, 'move');
+  const s = await page.evaluate(() => {
+    const st = (window as any).__tb.runtime.board.getState();
+    const g = st.doc.pages
+      .find((p: any) => p.id === st.pageId)
+      .objects.find((o: any) => o.type === 'geometry');
+    const angle = g.elements.find((e: any) => e.kind === 'angle');
+    st.setGeoSelection({ objectId: g.id, ids: [angle.id] });
+    return angle.id;
+  });
+  expect(s).toBeTruthy();
+  await page.getByTestId('geo-text').fill('x+3');
+  await page.getByTestId('geo-text').press('Enter');
+  const text = await page.evaluate(() => {
+    const st = (window as any).__tb.runtime.board.getState();
+    const g = st.doc.pages
+      .find((p: any) => p.id === st.pageId)
+      .objects.find((o: any) => o.type === 'geometry');
+    return g.elements.find((e: any) => e.kind === 'angle').style.text;
+  });
+  expect(text).toBe('x+3');
+});

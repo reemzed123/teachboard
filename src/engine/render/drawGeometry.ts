@@ -107,6 +107,20 @@ export function measureText(e: GeoElement, s: Extract<Solved, { t: 'meas' }>): s
   }
 }
 
+/** הטקסט של זווית/קטע: הערך המחושב, ביטוי של המורה (x+3), או שניהם */
+export function valueText(e: GeoElement, value: string): string {
+  const text = e.style.text?.trim();
+  if (!text) return value;
+  return e.style.showValue ? `${text} = ${value}` : text;
+}
+
+/** גודל קשת במעלות (0–360) */
+export function arcDegrees(s: Extract<Solved, { t: 'arc' }>): number {
+  let sweep = s.a1 - s.a0;
+  while (sweep <= 0) sweep += Math.PI * 2;
+  return (sweep * 180) / Math.PI;
+}
+
 /** ציור הבנייה. selected = אלמנטים מודגשים (בעריכה). */
 export function drawGeometry(
   ctx: CanvasRenderingContext2D,
@@ -189,6 +203,28 @@ export function drawGeometry(
     if (s.t === 'ln' && s.mode !== 'segment' && e.style.arrows) {
       drawParallelArrows(ctx, s.x1, s.y1, s.x2, s.y2, e.style.arrows);
     }
+    // ביטוי/שם לקטע (למשל 2x), ליד אמצע הקטע
+    if (s.t === 'ln' && s.mode === 'segment' && e.style.text) {
+      const len = Math.hypot(s.x2 - s.x1, s.y2 - s.y1) || 1;
+      const nx = (s.y2 - s.y1) / len;
+      const ny = -(s.x2 - s.x1) / len;
+      const text = valueText(e, formatNumber(len / UNITS_PER_CM, 2));
+      ctx.font = `600 14px ${FONT}`;
+      const w = ctx.measureText(text).width;
+      const mx = (s.x1 + s.x2) / 2 + nx * 16;
+      const my = (s.y1 + s.y2) / 2 + ny * 16;
+      label(ctx, text, mx - w / 2, my + 7, e.style.color, 14);
+    }
+    // מעלות הקשת
+    if (s.t === 'arc' && e.style.showLabel === true) {
+      const mid = s.a0 + (arcDegrees(s) * Math.PI) / 360;
+      const text = valueText(e, `${formatNumber(arcDegrees(s), 1)}°`);
+      ctx.font = `600 13px ${FONT}`;
+      const w = ctx.measureText(text).width;
+      const tx = s.cx + Math.cos(mid) * (s.r + 16);
+      const ty = s.cy + Math.sin(mid) * (s.r + 16);
+      label(ctx, text, tx - w / 2, ty + 7, e.style.color, 13);
+    }
   });
 
   // 3. זוויות: קשת (או ריבוע לזווית ישרה) ומספר מעלות
@@ -219,9 +255,13 @@ export function drawGeometry(
     const mid = s.a0 + s.sweep / 2;
     const tx = s.vx + Math.cos(mid) * (r + 20);
     const ty = s.vy + Math.sin(mid) * (r + 20);
-    if (e.style.showLabel !== false) {
-      ctx.font = `13px ${FONT}`;
-      const text = `${formatNumber(s.deg, 1)}°`;
+    if (e.style.showLabel !== false || e.style.text) {
+      ctx.font = `600 13px ${FONT}`;
+      const deg = `${formatNumber(s.deg, 1)}°`;
+      const text =
+        e.style.showLabel === false && !e.style.showValue
+          ? (e.style.text ?? deg)
+          : valueText(e, deg);
       const w = ctx.measureText(text).width;
       label(ctx, text, tx - w / 2, ty + 7, e.style.color, 13);
     }

@@ -23,6 +23,7 @@ export const POINT_KINDS: ReadonlySet<GeoKind> = new Set([
   'intersection',
   'foot',
   'regularVertex',
+  'relPoint',
 ]);
 export const LINE_KINDS: ReadonlySet<GeoKind> = new Set([
   'segment',
@@ -282,13 +283,28 @@ export function hitElement(
     if (e.style.hidden) continue;
     const s = sol.get(e.id);
     if (!s || !matches(e, s, type)) continue;
-    const d = distanceTo(s, x, y) - (s.t === 'pt' ? tol : 0);
+    let d = distanceTo(s, x, y) - (s.t === 'pt' ? tol : 0);
+    // לחיצה בתוך מצולע בוחרת אותו (בעדיפות נמוכה מצלעות ונקודות)
+    if (s.t === 'poly' && d > tol && pointInPolygon(s.pts, x, y)) d = tol * 0.99;
     if (d <= tol && d < bestD) {
       best = e;
       bestD = d;
     }
   }
   return best;
+}
+
+export function pointInPolygon(pts: readonly number[], x: number, y: number): boolean {
+  let inside = false;
+  const n = pts.length / 2;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = pts[i * 2]!;
+    const yi = pts[i * 2 + 1]!;
+    const xj = pts[j * 2]!;
+    const yj = pts[j * 2 + 1]!;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 /** נקודות חופשיות שהאלמנט נבנה עליהן (כדי להזיז קטע/מצולע שלם) */
@@ -299,7 +315,11 @@ export function freeAncestors(elements: readonly GeoElement[], id: string): stri
     const e = byId.get(eid);
     if (!e) return;
     if (e.kind === 'point') out.add(e.id);
-    else e.parents.forEach(visit);
+    else {
+      // נקודה גולשת זזה יחד עם הצורה (למשל צורה בגודל קבוע)
+      if (e.kind === 'glider') out.add(e.id);
+      e.parents.forEach(visit);
+    }
   };
   visit(id);
   return [...out];

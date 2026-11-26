@@ -345,6 +345,10 @@ function cleanGeometry(v: Obj, id: string): GeometryObject | null {
     if (idx !== null) params.index = Math.round(idx);
     const r = num(pr.r, 0.001, C);
     if (r !== null) params.r = r;
+    const u = num(pr.u, -1000, 1000);
+    if (u !== null) params.u = u;
+    const vv = num(pr.v, -1000, 1000);
+    if (vv !== null) params.v = vv;
     const n = num(pr.n, 3, 50);
     if (n !== null) params.n = Math.round(n);
     const k = num(pr.k, 2, 50);
@@ -365,6 +369,11 @@ function cleanGeometry(v: Obj, id: string): GeometryObject | null {
     }
     if (st.fill === true) style.fill = true;
     if (st.hidden === true) style.hidden = true;
+    const text = typeof st.text === 'string' ? cleanString(st.text, 40) : null;
+    if (text) style.text = text;
+    if (st.showValue === true) style.showValue = true;
+    const tag = typeof st.tag === 'string' ? cleanString(st.tag, 120) : null;
+    if (tag) style.tag = tag;
     seen.add(raw.id);
     elements.push({
       id: raw.id,

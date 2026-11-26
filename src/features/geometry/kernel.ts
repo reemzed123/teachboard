@@ -119,6 +119,20 @@ function build(board: JxBoard, elements: readonly GeoElement[]): Map<string, JxE
           );
           break;
         }
+        case 'relPoint': {
+          // A + u·(B−A) + v·(B−A מסובב 90° "למעלה" במסך)
+          const u = pr.u ?? 0;
+          const v = pr.v ?? 0;
+          el = board.create(
+            'point',
+            [
+              () => a.X() + u * (b.X() - a.X()) + v * (b.Y() - a.Y()),
+              () => a.Y() + u * (b.Y() - a.Y()) - v * (b.X() - a.X()),
+            ],
+            opt,
+          );
+          break;
+        }
         case 'segment':
           el = board.create('segment', [a, b], opt);
           break;
@@ -210,7 +224,8 @@ export function solve(obj: GeometryObject): Solution {
         case 'midpoint':
         case 'intersection':
         case 'foot':
-        case 'regularVertex': {
+        case 'regularVertex':
+        case 'relPoint': {
           if (!el) break;
           const x = el.X();
           const y = el.Y();

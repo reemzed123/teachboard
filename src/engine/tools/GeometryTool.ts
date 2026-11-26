@@ -12,7 +12,14 @@ import {
   type Solution,
 } from '../../core/geometry/construction';
 import { toLocal } from '../../core/geometry/transform';
-import { buildStep, newPoint, TOOL_SLOTS, type Slot } from '../../core/geometry/tools';
+import { shapeError } from '../../core/geometry/shapes';
+import {
+  buildStep,
+  newPoint,
+  ON_CIRCLE_TOOLS,
+  TOOL_SLOTS,
+  type Slot,
+} from '../../core/geometry/tools';
 import { currentPage, type ViewState } from '../../features/board/boardStore';
 import { geometrySelection } from '../render/drawObject';
 import { getSolution } from '../render/geoCache';
@@ -119,6 +126,9 @@ export class GeometryTool implements ToolHandler {
     }
 
     // ---- כלי בנייה: איסוף קלטים ----
+    // צורה ידועה עם מידות לא תקינות – לא בונים (ההסבר מופיע בחלונית)
+    const shape = this.prefs().shape;
+    if (tool === 'shape' && shapeError(shape.id, shape.dims)) return;
     const options = TOOL_SLOTS[tool];
     const step = this.picked.length;
     // נקודה קודמת לכל סוג אחר (לחיצה ליד קצה קטע = הנקודה)
@@ -151,8 +161,13 @@ export class GeometryTool implements ToolHandler {
     if (!chosen && needed.includes('P')) {
       // נקודה חדשה: על ישר/מעגל (גולשת) אם לחצו עליהם, אחרת חופשית
       const on = o && sol ? hitElement(els, sol, p.x, p.y, this.tol(), 'any') : null;
+      // מיתר/רדיוס/זוויות במעגל: הנקודות החדשות תמיד על המעגל שנבחר
       const onPath =
-        on && (sol!.get(on.id)?.t === 'ln' || sol!.get(on.id)?.t === 'circ') ? on.id : undefined;
+        ON_CIRCLE_TOOLS.has(tool) && this.picked[0]
+          ? this.picked[0]
+          : on && (sol!.get(on.id)?.t === 'ln' || sol!.get(on.id)?.t === 'circ')
+            ? on.id
+            : undefined;
       created = newPoint(els, p.x, p.y, this.style(), onPath);
       chosen = created.id;
     }
@@ -178,6 +193,14 @@ export class GeometryTool implements ToolHandler {
         r: this.prefs().radiusCm * UNITS_PER_CM,
         kindOf: (id) => byId.get(id)?.kind,
         parentsOf: (id) => byId.get(id)?.parents ?? [],
+        shape,
+        unitsPerCm: UNITS_PER_CM,
+        posOf: (id) => {
+          const s = sol?.get(id);
+          if (s?.t === 'pt') return { x: s.x, y: s.y };
+          const e = byId.get(id);
+          return e?.params?.x !== undefined ? { x: e.params.x, y: e.params.y ?? 0 } : undefined;
+        },
       });
       elements = [...elements, ...added];
       this.picked = [];
