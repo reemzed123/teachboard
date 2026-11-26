@@ -20,6 +20,12 @@ export default defineConfig({
         start_url: './',
         scope: './',
         display: 'standalone',
+        // "פתח באמצעות TeachBoard" ב-Windows, כשהתוכנה מותקנת
+        file_handlers: [
+          { action: './', accept: { 'application/x-teachboard': ['.board'] } },
+          { action: './', accept: { 'application/pdf': ['.pdf'] } },
+        ],
+        launch_handler: { client_mode: 'focus-existing' },
         background_color: '#eef1f5',
         theme_color: '#2563eb',
         icons: [
@@ -36,6 +42,8 @@ export default defineConfig({
           'pdfjs/**/*.{pfb,ttf,bcmap,icc,wasm}',
         ],
         navigateFallback: 'index.html',
+        // כל קובץ חייב להישמר במכשיר (ברירת המחדל 2MB עלולה לדלג בשקט על קובץ גדול)
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         cleanupOutdatedCaches: true,
       },
     }),

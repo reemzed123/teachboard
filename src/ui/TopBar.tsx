@@ -1,4 +1,5 @@
 import { Settings as SettingsIcon } from 'lucide-react';
+import { OfflineBadge } from './OfflineBadge';
 import { useApp } from '../app/StoreContext';
 import { t } from '../i18n';
 import { ActionButton } from './ActionButton';
@@ -20,6 +21,7 @@ export function TopBar() {
       </div>
       <QuickAccessBar />
       <div className="tb-topbar-end">
+        <OfflineBadge />
         <IconButton
           icon={SettingsIcon}
           label={t('action.settings')}

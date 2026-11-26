@@ -5,6 +5,7 @@ import { useApp } from '../app/StoreContext';
 import type { ThemePreference } from '../core/settings/settings';
 import { t } from '../i18n';
 import { SidePanel } from './SidePanel';
+import { AppInstallSection } from './AppInstallSection';
 
 const THEMES: ThemePreference[] = ['system', 'light', 'dark'];
 
@@ -39,6 +40,8 @@ export function SettingsPanel() {
           </label>
         ))}
       </fieldset>
+
+      <AppInstallSection />
 
       <fieldset className="tb-field">
         <legend>{t('settings.behavior')}</legend>

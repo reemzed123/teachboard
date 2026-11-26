@@ -17,6 +17,8 @@ import { createWebSettingsStorage } from './platform/web/settingsStorage';
 import { UpdatePrompt } from './ui/UpdatePrompt';
 import { ErrorBoundary } from './ui/ErrorBoundary';
 import { createTeachingStore } from './features/teaching/teachingStore';
+import { installPwaListeners, requestPersistence } from './platform/web/pwa';
+import { handleLaunchedFiles } from './features/lessons/launchFiles';
 import './styles/global.css';
 
 setLocale('he');
@@ -46,8 +48,9 @@ const runtime: AppRuntime = {
   engine: null,
 };
 
-// מבקשים מהדפדפן לא למחוק את הנתונים המקומיים כשהדיסק מתמלא.
-void navigator.storage?.persist?.().catch(() => undefined);
+// מבקשים מהדפדפן לא למחוק את הנתונים המקומיים כשהדיסק מתמלא; מצב התקנה ואינטרנט.
+installPwaListeners();
+void requestPersistence();
 
 // פתיחת השיעור האחרון (או יצירת שיעור ראשון).
 void lessons.getState().init();
@@ -63,6 +66,9 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') flush();
 });
 window.addEventListener('pagehide', flush);
+
+// פתיחת קבצים מ-Windows ("פתח באמצעות TeachBoard") – כשהתוכנה מותקנת
+handleLaunchedFiles(runtime);
 // מחילים את המראה לפני הציור הראשון, כדי שלא יהיה "הבהוב" של מצב בהיר.
 applyTheme(runtime.app.getState().settings.theme);
 
