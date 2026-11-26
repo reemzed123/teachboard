@@ -3,6 +3,7 @@ name: Windows app
 # בונה את תוכנת ההתקנה ל-Windows (Tauri) על מחשב Windows של GitHub.
 # בכל שינוי ב-main – קובץ התקנה להורדה (Artifacts, נשמר 30 יום).
 # ביצירת Release ב-GitHub (למשל v0.9.0) – קובץ ההתקנה מצורף אליו (קבוע, להורדה נוחה).
+# הפעלה ידנית עם release_tag – יוצרת Release חדש עם קובץ ההתקנה.
 
 on:
   push:
@@ -10,6 +11,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'גרסה לפרסום כ-Release (למשל v0.9.0). ריק = רק קובץ להורדה.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -52,3 +58,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ github.event.release.tag_name }}" "${{ steps.installer.outputs.path }}" --clobber
+      - name: Publish a new release (manual run with a version)
+        if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: >
+          gh release create "$TAG" "${{ steps.installer.outputs.path }}"
+          --target "$GITHUB_SHA" --prerelease
+          --title "TeachBoard $TAG"
+          --notes "קובץ התקנה ל-Windows 10/11 (לא חתום – ראו הוראות). הוראות התקנה ורשימת בדיקה: docs/INSTALL-WINDOWS.md"
