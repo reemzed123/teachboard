@@ -1,7 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "הרשאות החלון הראשי: רק הפקודות של TeachBoard (בלי גישה כללית לקבצים או לרשת)",
-  "windows": ["main"],
-  "permissions": ["core:default"]
+  "description": "הרשאות החלונות: רק הפקודות של TeachBoard, ופתיחת חלון מקרן במסך השני (בלי גישה כללית לקבצים או לרשת)",
+  "windows": ["main", "projector"],
+  "permissions": [
+    "core:default",
+    "core:webview:allow-create-webview-window",
+    "core:window:allow-available-monitors",
+    "core:window:allow-current-monitor",
+    "core:window:allow-set-focus"
+  ]
 }

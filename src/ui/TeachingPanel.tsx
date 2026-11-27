@@ -1,4 +1,5 @@
-import { Crosshair, Eye, Maximize2, Square, Timer, Watch } from 'lucide-react';
+import { Crosshair, Eye, Maximize2, MonitorUp, Square, Timer, Watch } from 'lucide-react';
+import { openProjector } from '../features/projector/openProjector';
 import { useApp, useBoard, useRuntime, useTeaching } from '../app/StoreContext';
 import { SPOTLIGHT_LIMITS, type CoverSide } from '../features/teaching/teachingStore';
 import { t } from '../i18n';
@@ -122,6 +123,21 @@ export function TeachingPanel() {
           <Watch size={18} aria-hidden="true" />
           {t('teaching.stopwatch')}
         </button>
+
+        <button
+          type="button"
+          className="tb-btn tb-btn-tool"
+          data-action="projector.open"
+          onClick={() =>
+            void openProjector().then(
+              (r) => r === 'blocked' && rt.app.getState().notify('error', t('projector.blocked')),
+            )
+          }
+        >
+          <MonitorUp size={18} aria-hidden="true" />
+          {t('projector.open')}
+        </button>
+        <p className="tb-help">{t('projector.help')}</p>
 
         <button type="button" className="tb-btn tb-btn-tool" onClick={() => setFocusMode(true)}>
           <Maximize2 size={18} aria-hidden="true" />

@@ -626,6 +626,12 @@ export const he = {
   'teaching.soundOff': 'השתקת צליל הסיום',
   'teaching.clockClose': 'סגירה',
   'teaching.present': 'מצב הצגה',
+  'projector.open': 'מסך מקרן',
+  'projector.help':
+    'פותח חלון נוסף עם הלוח בלבד – בלי סרגלים וחלוניות – שעוקב אחרי הכתיבה, הדף, הזום וכלי ההוראה. בתוכנה המותקנת הוא נפתח במסך השני; בדפדפן – גוררים אותו למקרן ולוחצים "מסך מלא".',
+  'projector.blocked': 'הדפדפן חסם את פתיחת החלון. אפשרו חלונות קופצים לאתר זה ונסו שוב.',
+  'projector.waiting': 'ממתין לתוכנה הראשית… (פתחו את TeachBoard בחלון אחר)',
+  'projector.fullscreen': 'מסך מלא',
   'teaching.presentHelp': 'מסתיר את כל הסרגלים – רק הלוח. Esc או הכפתור בפינה – חזרה.',
   'tool.laser': 'מצביע לייזר',
   'radial.title': 'תפריט מהיר',

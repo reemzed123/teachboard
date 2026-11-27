@@ -2,6 +2,7 @@ import { newId } from '../../core/document/ids';
 import { IDENTITY_TRANSFORM, type InkKind, type InkObject } from '../../core/document/types';
 import { simplifyClosePoints } from '../../core/ink/ink';
 import { recognizeShape } from '../../core/ink/recognize';
+import { hasLiveInkListeners, setLiveInk } from '../liveInk';
 import { drawingEdges, nearestEdge, projectOnEdge, type Edge } from '../../core/instruments';
 import {
   beautifyStroke,
@@ -127,6 +128,24 @@ export class InkTool implements ToolHandler {
       this.ctx.live.segment(ax, ay, ar, bx, by, r);
     }
     this.points.push(bx, by, pr);
+    this.publishLive();
+  }
+
+  /** הקו בזמן הכתיבה – למסך המקרן */
+  private publishLive() {
+    if (!hasLiveInkListeners()) return;
+    const pts = this.points;
+    if (!pts.length) return setLiveInk(null);
+    const ox = pts[0]!;
+    const oy = pts[1]!;
+    setLiveInk({
+      id: 'live',
+      type: 'ink',
+      transform: { ...IDENTITY_TRANSFORM, x: ox, y: oy },
+      style: this.style(),
+      points: pts.map((v, i) => (i % 3 === 0 ? v - ox : i % 3 === 1 ? v - oy : v)),
+      pressure: this.pressureSeen,
+    });
   }
 
   down(s: PointerSample): void {
@@ -252,6 +271,7 @@ export class InkTool implements ToolHandler {
     ]);
     this.points = [];
     this.ctx.live.clear();
+    setLiveInk(null);
   }
 
   /** מצייר מחדש את כל הקו שנכתב עד עכשיו (אחרי שהמשטח נמחק בשינוי גודל). */
@@ -281,6 +301,7 @@ export class InkTool implements ToolHandler {
   }
 
   cancel(): void {
+    setLiveInk(null);
     this.stopHold();
     this.snapped = null;
     this.active = false;
