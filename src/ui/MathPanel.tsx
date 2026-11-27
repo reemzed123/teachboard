@@ -28,6 +28,7 @@ import { visibleBoardRect } from '../engine/viewport';
 import { t } from '../i18n';
 import { IconButton } from './IconButton';
 import { SidePanel } from './SidePanel';
+import { MathProps } from './MathProps';
 
 const GRAPH_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#ea580c', '#7c3aed', '#0891b2'];
 
@@ -96,6 +97,7 @@ export function MathPanel() {
       ) : (
         <p className="tb-help">{t('math.selectGraphHelp')}</p>
       )}
+      <MathProps selected={selected} />
     </SidePanel>
   );
 }

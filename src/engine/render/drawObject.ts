@@ -1,3 +1,4 @@
+import { drawFractionBars, drawNumberLine } from './drawProps';
 import type {
   BoardObject,
   InkObject,
@@ -110,6 +111,12 @@ export function drawObjectLocal(ctx: CanvasRenderingContext2D, o: BoardObject): 
       break;
     case 'geometry':
       drawGeometry(ctx, o, geometrySelection.get(o.id));
+      break;
+    case 'numberline':
+      drawNumberLine(ctx, o);
+      break;
+    case 'fractions':
+      drawFractionBars(ctx, o);
       break;
     case 'image': {
       const img = objectImages?.getImage(o.assetId);

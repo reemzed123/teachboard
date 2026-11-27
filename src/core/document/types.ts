@@ -132,10 +132,35 @@ export interface GraphObject extends ObjectBase {
 export interface TableObject extends ObjectBase {
   type: 'table';
   rows: string[][];
+  /** false = בלי שורת כותרת (למשל לוח 100) */
+  header?: boolean;
+  /** כיוון העמודות: ltr לטבלאות מספרים (לוח 100); ברירת מחדל מימין לשמאל */
+  dir?: 'ltr' | 'rtl';
   fontSize: number;
   color: string;
   cellWidth: number;
   cellHeight: number;
+}
+
+/** ציר מספרים */
+export interface NumberLineObject extends ObjectBase {
+  type: 'numberline';
+  from: number;
+  to: number;
+  step: number;
+  width: number;
+  height: number;
+  color: string;
+}
+
+/** רצועות שברים: שלם, חצאים, שלישים… אחת מתחת לשנייה */
+export interface FractionBarsObject extends ObjectBase {
+  type: 'fractions';
+  /** המכנים של השורות (1 = שלם) */
+  denominators: number[];
+  width: number;
+  rowHeight: number;
+  color: string;
 }
 
 /** תמונה על הלוח (הקובץ שמור כמשאב בשיעור, לפי טביעת SHA-256) */
@@ -238,7 +263,9 @@ export type BoardObject =
   | GraphObject
   | TableObject
   | GeometryObject
-  | ImageObject;
+  | ImageObject
+  | NumberLineObject
+  | FractionBarsObject;
 
 /** עמוד מחברת (עם גבולות) או לוח אינסופי. המעבר ביניהם לא מוחק תוכן. */
 export type PageLayout = 'bounded' | 'infinite';

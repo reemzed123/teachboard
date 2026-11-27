@@ -76,7 +76,7 @@ test('formula templates insert empty structures (fraction, root, system of equat
   await page.getByRole('button', { name: 'מתמטיקה' }).click();
   await page.getByRole('button', { name: 'נוסחה חדשה' }).click();
   await typeInFormula(page, 'y=');
-  await page.getByRole('button', { name: 'שבר' }).click();
+  await page.getByRole('button', { name: 'שבר', exact: true }).click();
   await page.waitForTimeout(150);
   await page.keyboard.type('1');
   await page.keyboard.press('Tab');

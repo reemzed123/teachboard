@@ -17,16 +17,7 @@ import {
   ZONE_LINE,
   zoneLines,
 } from '../../core/background/pattern';
-import type {
-  BoardDocument,
-  GeometryObject,
-  GraphObject,
-  MathObject,
-  Page,
-  ShapeObject,
-  TableObject,
-  TextObject,
-} from '../../core/document/types';
+import type { BoardDocument, BoardObject, Page, ShapeObject } from '../../core/document/types';
 import { arrowHeadSize, localBounds } from '../../core/objects/geometry';
 import { dashPattern, drawObjectLocal } from '../../engine/render/drawObject';
 import { outlinePolygon, polygonToSvgPath } from '../../engine/render/inkOutline';
@@ -328,7 +319,7 @@ function drawPdfShape(out: PDFPage, o: ShapeObject, base: PdfBase) {
 async function drawPdfRaster(
   pdf: PDFDocument,
   out: PDFPage,
-  o: TextObject | MathObject | GraphObject | TableObject | GeometryObject,
+  o: Exclude<BoardObject, { type: 'ink' | 'shape' | 'image' }>,
   X: (x: number) => number,
   Y: (y: number) => number,
   k: number,

@@ -294,8 +294,11 @@ export function drawTable(ctx: CanvasRenderingContext2D, o: TableObject): void {
   const H = o.rows.length * o.cellHeight;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = 'rgba(37,99,235,0.08)';
-  ctx.fillRect(0, 0, W, o.cellHeight);
+  const header = o.header !== false;
+  if (header) {
+    ctx.fillStyle = 'rgba(37,99,235,0.08)';
+    ctx.fillRect(0, 0, W, o.cellHeight);
+  }
   ctx.strokeStyle = '#9aa6b5';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -312,11 +315,12 @@ export function drawTable(ctx: CanvasRenderingContext2D, o: TableObject): void {
   ctx.textBaseline = 'middle';
   ctx.fillStyle = o.color;
   o.rows.forEach((row, r) => {
-    ctx.font = `${r === 0 ? 700 : 400} ${o.fontSize}px ${FONT}`;
-    // עמודות מימין לשמאל (כמו טבלה בעברית)
+    ctx.font = `${r === 0 && header ? 700 : 400} ${o.fontSize}px ${FONT}`;
+    // עמודות מימין לשמאל (כמו טבלה בעברית), או משמאל לימין (לוח 100)
     row.forEach((cell, c) => {
       ctx.direction = /[֐-׿]/.test(cell) ? 'rtl' : 'ltr';
-      ctx.fillText(cell, W - (c + 0.5) * o.cellWidth, (r + 0.5) * o.cellHeight);
+      const x = o.dir === 'ltr' ? (c + 0.5) * o.cellWidth : W - (c + 0.5) * o.cellWidth;
+      ctx.fillText(cell, x, (r + 0.5) * o.cellHeight);
     });
   });
 }

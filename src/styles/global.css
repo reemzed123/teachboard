@@ -2419,3 +2419,9 @@ input.tb-layer-name {
   background: color-mix(in srgb, var(--panel-color) 14%, var(--tb-surface));
   color: color-mix(in srgb, var(--panel-color) 85%, var(--tb-text));
 }
+
+.tb-fraction-choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px 8px;
+}

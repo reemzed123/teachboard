@@ -24,6 +24,8 @@ import {
   type PageBackground,
   type PageLayer,
   type ImageObject,
+  type NumberLineObject,
+  type FractionBarsObject,
 } from '../document/types';
 
 // בדיקת תקינות של מסמך שנקרא מאחסון או מקובץ.
@@ -275,6 +277,55 @@ function cleanGraph(v: Obj, id: string): GraphObject | null {
   );
 }
 
+function cleanNumberLine(v: Obj, id: string): NumberLineObject | null {
+  const from = num(v.from, -1e6, 1e6);
+  const to = num(v.to, -1e6, 1e6);
+  const step = num(v.step, 1e-6, 1e6);
+  const width = num(v.width, 20, 20000);
+  const height = num(v.height, 20, 2000);
+  const c = color(v.color);
+  if (from === null || to === null || step === null || width === null || height === null || !c)
+    return null;
+  if (to <= from || (to - from) / step > 1000) return null;
+  return withCommon<NumberLineObject>(
+    {
+      id,
+      type: 'numberline',
+      transform: cleanTransform(v.transform),
+      from,
+      to,
+      step,
+      width,
+      height,
+      color: c,
+    },
+    v,
+  );
+}
+
+function cleanFractions(v: Obj, id: string): FractionBarsObject | null {
+  if (!Array.isArray(v.denominators)) return null;
+  const denominators = v.denominators
+    .filter((d): d is number => typeof d === 'number' && Number.isInteger(d) && d >= 1 && d <= 24)
+    .slice(0, 24);
+  const width = num(v.width, 20, 20000);
+  const rowHeight = num(v.rowHeight, 8, 1000);
+  const c = color(v.color);
+  if (!denominators.length || width === null || rowHeight === null || !c) return null;
+  return withCommon<FractionBarsObject>(
+    {
+      id,
+      type: 'fractions',
+      transform: cleanTransform(v.transform),
+      denominators,
+      width,
+      rowHeight,
+      color: c,
+    },
+    v,
+  );
+}
+
 function cleanImage(v: Obj, id: string): ImageObject | null {
   if (typeof v.assetId !== 'string' || !ASSET_ID.test(v.assetId)) return null;
   const width = num(v.width, 1, 20000);
@@ -315,6 +366,8 @@ function cleanTable(v: Obj, id: string): TableObject | null {
       color: c,
       cellWidth,
       cellHeight,
+      ...(v.header === false ? { header: false } : {}),
+      ...(v.dir === 'ltr' ? { dir: 'ltr' as const } : {}),
     },
     v,
   );
@@ -469,6 +522,8 @@ const CLEANERS: Record<string, (v: Obj, id: string) => BoardObject | null> = {
   graph: cleanGraph,
   table: cleanTable,
   image: cleanImage,
+  numberline: cleanNumberLine,
+  fractions: cleanFractions,
   geometry: cleanGeometry,
 };
 
