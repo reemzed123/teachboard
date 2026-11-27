@@ -22,6 +22,7 @@ import { handleLaunchedFiles } from './features/lessons/launchFiles';
 import { isDesktopApp } from './platform/desktop';
 import { installTeacherSync } from './features/projector/teacherSync';
 import { setObjectImageSource } from './engine/render/drawObject';
+import { installPageZoomGuard } from './app/pageZoomGuard';
 import './styles/global.css';
 
 /** מפעיל את התוכנה הראשית (לא במסך המקרן) */
@@ -59,6 +60,7 @@ export function startApp(): void {
   installPwaListeners();
   // מסך מקרן (אם נפתח): משדרים אליו את הלוח
   installTeacherSync(runtime);
+  installPageZoomGuard();
   void requestPersistence();
 
   // מסך הפתיחה (לפי ההגדרה). בבדיקות אוטומטיות הוא לא מוצג, אלא אם מבקשים ‎?start=1.
