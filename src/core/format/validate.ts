@@ -23,6 +23,7 @@ import {
   type Transform,
   type PageBackground,
   type PageLayer,
+  type ImageObject,
 } from '../document/types';
 
 // בדיקת תקינות של מסמך שנקרא מאחסון או מקובץ.
@@ -274,6 +275,24 @@ function cleanGraph(v: Obj, id: string): GraphObject | null {
   );
 }
 
+function cleanImage(v: Obj, id: string): ImageObject | null {
+  if (typeof v.assetId !== 'string' || !ASSET_ID.test(v.assetId)) return null;
+  const width = num(v.width, 1, 20000);
+  const height = num(v.height, 1, 20000);
+  if (width === null || height === null) return null;
+  return withCommon<ImageObject>(
+    {
+      id,
+      type: 'image',
+      transform: cleanTransform(v.transform),
+      assetId: v.assetId,
+      width,
+      height,
+    },
+    v,
+  );
+}
+
 function cleanTable(v: Obj, id: string): TableObject | null {
   if (!Array.isArray(v.rows) || v.rows.length === 0 || v.rows.length > 200) return null;
   const rows = v.rows.map((row) =>
@@ -449,6 +468,7 @@ const CLEANERS: Record<string, (v: Obj, id: string) => BoardObject | null> = {
   math: cleanMath,
   graph: cleanGraph,
   table: cleanTable,
+  image: cleanImage,
   geometry: cleanGeometry,
 };
 
@@ -518,6 +538,7 @@ export function referencedAssets(doc: BoardDocument): string[] {
   for (const p of doc.pages) {
     if (p.background.imageAssetId) ids.add(p.background.imageAssetId);
     if (p.background.pdf) ids.add(p.background.pdf.assetId);
+    for (const o of p.objects) if (o.type === 'image') ids.add(o.assetId);
   }
   return [...ids];
 }

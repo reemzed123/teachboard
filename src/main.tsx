@@ -20,12 +20,15 @@ import { createTeachingStore } from './features/teaching/teachingStore';
 import { installPwaListeners, requestPersistence } from './platform/web/pwa';
 import { handleLaunchedFiles } from './features/lessons/launchFiles';
 import { isDesktopApp } from './platform/desktop';
+import { setObjectImageSource } from './engine/render/drawObject';
 import './styles/global.css';
 
 setLocale('he');
 
 const repo = createWebLessonRepository();
 const assets = new AssetCache(repo);
+// תמונות על הלוח נטענות מהמטמון של השיעור (גם בציור וגם בייצוא)
+setObjectImageSource(assets);
 const board = createBoardStore(createWebSettingsStorage('default', 'tools'));
 const lessons = createLessonController({
   repo,

@@ -111,7 +111,24 @@ export function drawObjectLocal(ctx: CanvasRenderingContext2D, o: BoardObject): 
     case 'geometry':
       drawGeometry(ctx, o, geometrySelection.get(o.id));
       break;
+    case 'image': {
+      const img = objectImages?.getImage(o.assetId);
+      if (img) ctx.drawImage(img, 0, 0, o.width, o.height);
+      else {
+        // התמונה עוד נטענת – מקום שמור
+        ctx.fillStyle = 'rgba(148,163,184,0.18)';
+        ctx.fillRect(0, 0, o.width, o.height);
+      }
+      break;
+    }
   }
+}
+
+/** מקור התמונות של אובייקטי תמונה (מטמון המשאבים של השיעור) */
+let objectImages: { getImage(assetId: string): CanvasImageSource | null } | null = null;
+
+export function setObjectImageSource(src: typeof objectImages): void {
+  objectImages = src;
 }
 
 /** אלמנטים מודגשים בבנייה (כלי הגיאומטריה מעדכן) */

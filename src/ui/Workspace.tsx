@@ -5,6 +5,7 @@ import { BoardEngine } from '../engine/BoardEngine';
 import { t } from '../i18n';
 import { installDebugHooks } from '../app/debug';
 import { attachEngine } from '../app/runtime';
+import { addImageFile, handleDroppedFiles, imageFrom } from '../features/lessons/imageActions';
 import { PageStrip } from './PageStrip';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SelectionToolbar } from './SelectionToolbar';
@@ -57,10 +58,52 @@ export function Workspace() {
     };
     host.addEventListener('pointerdown', onBoardPointerDown);
 
+    // הדבקה (Ctrl+V): תמונה מהלוח של המערכת – נוספת כאובייקט; אחרת – הדבקת אובייקטים מהלוח
+    const onPaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'MATH-FIELD'].includes(target.tagName) ||
+          document.querySelector('dialog[open]'))
+      )
+        return;
+      const img = imageFrom(e.clipboardData);
+      e.preventDefault();
+      if (img) void addImageFile(rt, img);
+      else if (rt.board.getState().clipboard?.length) rt.board.getState().paste();
+    };
+    window.addEventListener('paste', onPaste);
+
+    // גרירת קבצים ללוח
+    const onDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    };
+    const onDrop = (e: DragEvent) => {
+      const files = Array.from(e.dataTransfer?.files ?? []);
+      if (!files.length) return;
+      e.preventDefault();
+      const r = host.getBoundingClientRect();
+      const v = rt.board.getState().view;
+      const at = {
+        x: (e.clientX - r.left - v.x) / v.scale,
+        y: (e.clientY - r.top - v.y) / v.scale,
+      };
+      void handleDroppedFiles(rt, files, at);
+    };
+    host.addEventListener('dragover', onDragOver);
+    host.addEventListener('drop', onDrop);
+
     return () => {
       unsub();
       removeDebug();
       host.removeEventListener('pointerdown', onBoardPointerDown);
+      window.removeEventListener('paste', onPaste);
+      host.removeEventListener('dragover', onDragOver);
+      host.removeEventListener('drop', onDrop);
       engine.destroy();
       if (rt.engine === engine) attachEngine(rt, null);
     };

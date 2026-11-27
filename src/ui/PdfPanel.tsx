@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useBoard, useRuntime } from '../app/StoreContext';
 import { currentPage } from '../features/board/boardStore';
 import { exportPdfFile, importPdf } from '../features/lessons/fileActions';
+import { pickAndAddImage } from '../features/lessons/imageActions';
 import { t } from '../i18n';
 import { SidePanel } from './SidePanel';
 
@@ -42,6 +43,19 @@ export function PdfPanel() {
         </button>
       </div>
       <p className="tb-help">{t('files.pdfHelp')}</p>
+      <section className="tb-field">
+        <h3 className="tb-section-title">{t('image.add')}</h3>
+        <button
+          type="button"
+          className="tb-btn"
+          disabled={busy}
+          data-action="image.add"
+          onClick={() => void run(() => pickAndAddImage(rt))}
+        >
+          {t('image.add')}
+        </button>
+        <p className="tb-help">{t('image.help')}</p>
+      </section>
       <p className="tb-help">{t('pdf.annotateHelp')}</p>
       {pdfPages > 0 && (
         <section className="tb-field">

@@ -173,12 +173,21 @@ export class AssetCache implements ImageSource {
 
   /** מכין את כל הרקעים של העמודים (תמונות ועמודי PDF) – לפני ייצוא או תמונה ממוזערת */
   async preparePages(pages: readonly Page[], pixelScale: number): Promise<void> {
-    const images = pages.map((p) => p.background.imageAssetId).filter((x): x is string => !!x);
+    const images = pages.flatMap((p) => [
+      ...(p.background.imageAssetId ? [p.background.imageAssetId] : []),
+      ...p.objects.flatMap((o) => (o.type === 'image' ? [o.assetId] : [])),
+    ]);
     await this.ensure([...new Set(images)]);
     for (const p of pages) {
       const pdf = p.background.pdf;
       if (pdf) await this.ensurePdfPage(pdf.assetId, pdf.page, pixelScale, p.size);
     }
+  }
+
+  /** גודל התמונה (פיקסלים), אחרי שנטענה */
+  imageSize(assetId: string): { width: number; height: number } | null {
+    const img = this.images.get(assetId);
+    return img ? { width: img.width, height: img.height } : null;
   }
 
   /** בתים של PDF מקורי (לייצוא) */

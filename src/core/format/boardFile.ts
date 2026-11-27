@@ -157,6 +157,8 @@ export function unpackBoardFile(bytes: Uint8Array, report?: ValidationReport): B
       for (const p of doc.pages) {
         if (p.background.imageAssetId === id) delete p.background.imageAssetId;
         if (p.background.pdf?.assetId === id) delete p.background.pdf;
+        // תמונה שהקובץ שלה חסר – לא מוצגת
+        p.objects = p.objects.filter((o) => !(o.type === 'image' && o.assetId === id));
       }
     }
   }

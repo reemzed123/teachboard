@@ -38,6 +38,7 @@ export function localBounds(o: BoardObject): Rect {
       return textLocalBounds(o);
     case 'math':
     case 'graph':
+    case 'image':
       return { x: 0, y: 0, width: o.width, height: o.height };
     case 'table':
       return { x: 0, y: 0, ...tableSize(o) };
@@ -71,6 +72,7 @@ export function objectHitsPoint(o: BoardObject, x: number, y: number, tolerance:
     case 'graph':
     case 'table':
     case 'geometry':
+    case 'image':
       return boxHit(o, x, y, tolerance);
   }
 }
@@ -88,7 +90,8 @@ export function objectIntersectsRect(o: BoardObject, rect: Rect): boolean {
     case 'math':
     case 'graph':
     case 'table':
-    case 'geometry': {
+    case 'geometry':
+    case 'image': {
       const b = objectBounds(o);
       return (
         b.x <= rect.x + rect.width &&

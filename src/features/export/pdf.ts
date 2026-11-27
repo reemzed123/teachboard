@@ -251,6 +251,23 @@ async function addPage(pdf: PDFDocument, page: Page, assets: PdfAssets, cache: E
       });
     } else if (o.type === 'shape') {
       drawPdfShape(out, o, base);
+    } else if (o.type === 'image') {
+      // התמונה המקורית (באיכות מלאה), לא צילום שלה
+      let img = imageCache.get(o.assetId);
+      if (!img) {
+        const a = await assets.get(o.assetId);
+        if (!a) continue;
+        img = a.type === 'image/png' ? await pdf.embedPng(a.data) : await pdf.embedJpg(a.data);
+        imageCache.set(o.assetId, img);
+      }
+      const p = rotatedCorner(o.transform, 0, o.height);
+      out.drawImage(img, {
+        x: X(p.x),
+        y: Y(p.y),
+        width: o.width * t.scale * k,
+        height: o.height * t.scale * k,
+        rotate: degrees(-t.rotation),
+      });
     } else {
       // טקסט, נוסחה, גרף וטבלה – כתמונה חדה (פי 4)
       await drawPdfRaster(pdf, out, o, X, Y, k);
@@ -329,18 +346,27 @@ async function drawPdfRaster(
   const img = await pdf.embedPng(new Uint8Array(await (await canvasToBlob(c)).arrayBuffer()));
   // פינת התמונה (המקומית b.x, b.y+height) אחרי סיבוב וקנה מידה
   const t = o.transform;
-  const rad = (t.rotation * Math.PI) / 180;
-  const lx = b.x;
-  const ly = b.y + b.height;
-  const wx = t.x + (lx * Math.cos(rad) - ly * Math.sin(rad)) * t.scale;
-  const wy = t.y + (lx * Math.sin(rad) + ly * Math.cos(rad)) * t.scale;
+  const corner = rotatedCorner(t, b.x, b.y + b.height);
   out.drawImage(img, {
-    x: X(wx),
-    y: Y(wy),
+    x: X(corner.x),
+    y: Y(corner.y),
     width: b.width * t.scale * k,
     height: b.height * t.scale * k,
     rotate: degrees(-t.rotation),
   });
+}
+
+/** נקודה מקומית (lx, ly) אחרי סיבוב וקנה מידה – בקואורדינטות לוח */
+function rotatedCorner(
+  t: { x: number; y: number; rotation: number; scale: number },
+  lx: number,
+  ly: number,
+) {
+  const rad = (t.rotation * Math.PI) / 180;
+  return {
+    x: t.x + (lx * Math.cos(rad) - ly * Math.sin(rad)) * t.scale,
+    y: t.y + (lx * Math.sin(rad) + ly * Math.cos(rad)) * t.scale,
+  };
 }
 
 /** יוצר PDF מהעמודים שנבחרו. */

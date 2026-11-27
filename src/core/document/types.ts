@@ -138,6 +138,14 @@ export interface TableObject extends ObjectBase {
   cellHeight: number;
 }
 
+/** תמונה על הלוח (הקובץ שמור כמשאב בשיעור, לפי טביעת SHA-256) */
+export interface ImageObject extends ObjectBase {
+  type: 'image';
+  assetId: string;
+  width: number;
+  height: number;
+}
+
 // ---------- גיאומטריה דינמית ----------
 
 export type GeoKind =
@@ -223,7 +231,14 @@ export interface GeometryObject extends ObjectBase {
 }
 
 export type BoardObject =
-  InkObject | ShapeObject | TextObject | MathObject | GraphObject | TableObject | GeometryObject;
+  | InkObject
+  | ShapeObject
+  | TextObject
+  | MathObject
+  | GraphObject
+  | TableObject
+  | GeometryObject
+  | ImageObject;
 
 /** עמוד מחברת (עם גבולות) או לוח אינסופי. המעבר ביניהם לא מוחק תוכן. */
 export type PageLayout = 'bounded' | 'infinite';

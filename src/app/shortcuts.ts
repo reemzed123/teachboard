@@ -1,3 +1,4 @@
+import { visibleObjects } from '../core/document/layers';
 import type { QuickActionId } from './actionIds';
 import { ACTIONS } from './actions';
 import type { AppRuntime } from './runtime';
@@ -20,7 +21,7 @@ const BINDINGS: Binding[] = [
   { code: 'KeyA', ctrl: true, action: 'selectAll' },
   { code: 'KeyC', ctrl: true, action: 'edit.copy' },
   { code: 'KeyX', ctrl: true, action: 'edit.cut' },
-  { code: 'KeyV', ctrl: true, action: 'edit.paste' },
+  // Ctrl+V מטופל באירוע ההדבקה (Workspace): תמונה מהלוח של המערכת, או הדבקה פנימית
   { code: 'KeyD', ctrl: true, action: 'edit.duplicate' },
   { code: 'KeyG', ctrl: true, shift: true, action: 'edit.ungroup' },
   { code: 'KeyG', ctrl: true, action: 'edit.group' },
@@ -91,7 +92,13 @@ export function handleShortcut(e: KeyboardEvent, rt: AppRuntime): boolean {
     const s = rt.board.getState();
     s.setTool('select');
     const page = s.doc.pages.find((p) => p.id === s.pageId);
-    s.setSelection(page ? page.objects.filter((o) => !o.locked).map((o) => o.id) : []);
+    s.setSelection(
+      page
+        ? visibleObjects(page)
+            .filter((o) => !o.locked)
+            .map((o) => o.id)
+        : [],
+    );
     return true;
   }
   const action = ACTIONS[binding.action];
