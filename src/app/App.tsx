@@ -83,7 +83,7 @@ export function App() {
   const category = CATEGORIES.find((c) => c.id === openPanel);
 
   return (
-    <div className="tb-app" data-focus={focusMode || undefined}>
+    <div className="tb-app" data-focus={focusMode || undefined} data-panel={openPanel ?? undefined}>
       {!focusMode && <TopBar />}
       <div className="tb-main">
         {!focusMode && categoryBarVisible && <CategoryBar />}

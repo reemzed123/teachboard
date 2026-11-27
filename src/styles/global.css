@@ -2210,3 +2210,212 @@ input.tb-layer-name {
     transition: none;
   }
 }
+
+/* =====================================================================
+   שכבת צבע: עיצוב חי יותר – צבע לכל קטגוריה, רקע צבעוני רך, הדגשות.
+   (שכבה נפרדת – אפשר לכוונן או להסיר בלי לגעת בשאר העיצוב)
+   ===================================================================== */
+:root {
+  --tb-bg: #f1f3fb;
+  --tb-desk: #e6eaf7;
+  --tb-surface-2: #f4f6fc;
+  --tb-border: #dfe3ef;
+  --tb-accent: #3b5bfd;
+  --tb-accent-2: #8b5cf6;
+  --tb-accent-soft: #e6ebff;
+  --tb-gradient: linear-gradient(135deg, #3b5bfd 0%, #8b5cf6 100%);
+  --tb-rainbow: linear-gradient(90deg, #3b5bfd, #8b5cf6, #ec4899, #f59e0b, #10b981);
+
+  --tb-cat-drawing: #2563eb;
+  --tb-cat-math: #7c3aed;
+  --tb-cat-geometry: #059669;
+  --tb-cat-pdf: #dc2626;
+  --tb-cat-teaching: #ea580c;
+  --tb-cat-templates: #0891b2;
+  --tb-cat-files: #ca8a04;
+  --tb-cat-settings: #475569;
+}
+
+:root[data-theme='dark'] {
+  --tb-bg: #0f1320;
+  --tb-desk: #0b0e18;
+  --tb-surface: #181d2b;
+  --tb-surface-2: #1f2536;
+  --tb-border: #2a3146;
+  --tb-accent: #8ea2ff;
+  --tb-accent-2: #b69cff;
+  --tb-accent-soft: #252e4f;
+  --tb-gradient: linear-gradient(135deg, #6b83ff 0%, #a78bfa 100%);
+
+  --tb-cat-drawing: #60a5fa;
+  --tb-cat-math: #a78bfa;
+  --tb-cat-geometry: #34d399;
+  --tb-cat-pdf: #f87171;
+  --tb-cat-teaching: #fb923c;
+  --tb-cat-templates: #22d3ee;
+  --tb-cat-files: #facc15;
+  --tb-cat-settings: #94a3b8;
+}
+
+/* סרגל עליון: פס צבעוני דק בתחתית, ושם התוכנה בצבע מדורג */
+.tb-topbar {
+  border-bottom: none;
+  box-shadow: 0 1px 0 var(--tb-border);
+}
+
+.tb-topbar::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 3px;
+  background: var(--tb-rainbow);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.tb-brand-name {
+  background: var(--tb-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.tb-brand svg {
+  color: var(--tb-accent);
+}
+
+/* אזור העבודה: רקע צבעוני רך מסביב לדף */
+.tb-workspace {
+  background:
+    radial-gradient(
+      900px 500px at 100% 0%,
+      color-mix(in srgb, var(--tb-accent) 10%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      800px 500px at 0% 100%,
+      color-mix(in srgb, var(--tb-accent-2) 10%, transparent),
+      transparent 70%
+    ),
+    var(--tb-desk);
+}
+
+/* סרגל הקטגוריות: לכל קטגוריה הצבע שלה */
+.tb-catbar .tb-icon-btn {
+  --cat: var(--tb-accent);
+  color: var(--cat);
+}
+
+.tb-catbar .tb-icon-btn[data-category='drawing'] {
+  --cat: var(--tb-cat-drawing);
+}
+.tb-catbar .tb-icon-btn[data-category='math'] {
+  --cat: var(--tb-cat-math);
+}
+.tb-catbar .tb-icon-btn[data-category='geometry'] {
+  --cat: var(--tb-cat-geometry);
+}
+.tb-catbar .tb-icon-btn[data-category='pdf'] {
+  --cat: var(--tb-cat-pdf);
+}
+.tb-catbar .tb-icon-btn[data-category='teaching'] {
+  --cat: var(--tb-cat-teaching);
+}
+.tb-catbar .tb-icon-btn[data-category='templates'] {
+  --cat: var(--tb-cat-templates);
+}
+.tb-catbar .tb-icon-btn[data-category='files'] {
+  --cat: var(--tb-cat-files);
+}
+
+.tb-catbar .tb-icon-btn:hover {
+  background: color-mix(in srgb, var(--cat) 12%, transparent);
+}
+
+.tb-catbar .tb-icon-btn[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--cat) 18%, var(--tb-surface));
+  color: var(--cat);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--cat) 45%, transparent);
+}
+
+/* החלונית בצבע הקטגוריה הפתוחה */
+.tb-app {
+  --panel-color: var(--tb-accent);
+}
+.tb-app[data-panel='drawing'] {
+  --panel-color: var(--tb-cat-drawing);
+}
+.tb-app[data-panel='math'] {
+  --panel-color: var(--tb-cat-math);
+}
+.tb-app[data-panel='geometry'] {
+  --panel-color: var(--tb-cat-geometry);
+}
+.tb-app[data-panel='pdf'] {
+  --panel-color: var(--tb-cat-pdf);
+}
+.tb-app[data-panel='teaching'] {
+  --panel-color: var(--tb-cat-teaching);
+}
+.tb-app[data-panel='templates'] {
+  --panel-color: var(--tb-cat-templates);
+}
+.tb-app[data-panel='files'] {
+  --panel-color: var(--tb-cat-files);
+}
+.tb-app[data-panel='settings'] {
+  --panel-color: var(--tb-cat-settings);
+}
+
+.tb-panel-head {
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--panel-color) 14%, var(--tb-surface)),
+    var(--tb-surface)
+  );
+  border-bottom: 2px solid color-mix(in srgb, var(--panel-color) 55%, transparent);
+}
+
+.tb-panel-head h2 {
+  color: color-mix(in srgb, var(--panel-color) 85%, var(--tb-text));
+  font-weight: 700;
+}
+
+.tb-panel legend,
+.tb-panel .tb-section-title {
+  color: color-mix(in srgb, var(--panel-color) 70%, var(--tb-text));
+}
+
+/* כפתור ראשי בצבע מדורג */
+.tb-btn-primary {
+  background: var(--tb-gradient);
+  border-color: transparent;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--tb-accent) 35%, transparent);
+}
+
+.tb-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+/* סרגל הגישה המהירה והכלים: לחצן פעיל בצבע מלא */
+.tb-quick .tb-icon-btn[aria-pressed='true'],
+.tb-topbar .tb-icon-btn[aria-pressed='true'] {
+  background: var(--tb-gradient);
+  color: #ffffff;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--tb-accent) 35%, transparent);
+}
+
+/* עמוד המחברת: צל רך יותר וקצת עומק */
+.tb-pages,
+.tb-zoom {
+  border-color: var(--tb-border);
+  box-shadow: 0 4px 16px rgb(40 50 110 / 0.1);
+}
+
+/* כפתורי כלים בחלונית (גיאומטריה) – הכלי הפעיל בצבע החלונית */
+.tb-geo-btn[aria-checked='true'] {
+  border-color: var(--panel-color);
+  background: color-mix(in srgb, var(--panel-color) 14%, var(--tb-surface));
+  color: color-mix(in srgb, var(--panel-color) 85%, var(--tb-text));
+}

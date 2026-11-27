@@ -42,9 +42,17 @@ export function Workspace() {
       const app = rt.app.getState();
       if (!app.settings.autoClosePanel || !app.openPanel) return;
       if (e.pointerType === 'mouse' && e.button !== 0) return;
-      const tool = rt.board.getState().tool;
-      // הזזת הלוח לא סוגרת; וגם לא בגיאומטריה – החלונית מציגה הנחיות ומאפייני האלמנט
-      if (tool === 'hand' || tool === 'geometry') return;
+      const board = rt.board.getState();
+      // הזזת הלוח לא סוגרת (רק מסתכלים)
+      if (board.tool === 'hand') return;
+      // גיאומטריה, "בחירה והזזה": בחירת אלמנט משאירה את החלונית – שם המאפיינים שלו.
+      // לחיצה במקום ריק – נסגרת.
+      if (board.tool === 'geometry' && board.prefs.geo.tool === 'move') {
+        setTimeout(() => {
+          if (!rt.board.getState().geoSelection) rt.app.getState().closePanel();
+        }, 0);
+        return;
+      }
       app.closePanel();
     };
     host.addEventListener('pointerdown', onBoardPointerDown);

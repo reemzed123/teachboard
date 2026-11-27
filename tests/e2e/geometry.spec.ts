@@ -32,6 +32,8 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() =>
     (window as any).__tb.runtime.board.getState().setView({ x: 0, y: 0, scale: 1 }),
   );
+  // בבדיקות הבנייה החלונית נשארת פתוחה (בוחרים בה כלים שוב ושוב)
+  await page.evaluate(() => (window as any).__tb.runtime.app.getState().setAutoClosePanel(false));
   await page.getByRole('button', { name: 'גיאומטריה' }).click();
 });
 
@@ -378,4 +380,21 @@ test('labels on the board: edit by double-click, expression replaces the value, 
   expect(
     els.filter((e: any) => e.kind === 'point').every((v: any) => v.style.showLabel === false),
   ).toBe(true);
+});
+
+test('the geometry panel closes when building on the board, but stays open when selecting an element', async ({
+  page,
+}) => {
+  await page.evaluate(() => (window as any).__tb.runtime.app.getState().setAutoClosePanel(true));
+  const panel = () => page.evaluate(() => (window as any).__tb.runtime.app.getState().openPanel);
+  await tool(page, 'segment');
+  await click(page, 150, 300);
+  expect(await panel()).toBeNull();
+  await page.getByRole('button', { name: 'גיאומטריה' }).click();
+  await tool(page, 'move');
+  await click(page, 150, 300); // הנקודה – נבחרת, והחלונית מציגה את המאפיינים
+  await expect.poll(panel).toBe('geometry');
+  await expect(page.getByTestId('geo-inspector')).toBeVisible();
+  await click(page, 500, 150); // מקום ריק – נסגרת
+  await expect.poll(panel).toBeNull();
 });
