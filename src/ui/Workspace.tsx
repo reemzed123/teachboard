@@ -12,6 +12,7 @@ import { SelectionToolbar } from './SelectionToolbar';
 import { GeoCircleBar } from './GeoCircleBar';
 import { GeoLabelEditor } from './GeoLabelEditor';
 import { QuickRadialMenu } from './QuickRadialMenu';
+import { InstrumentsOverlay } from './InstrumentsOverlay';
 import { TextEditor } from './TextEditor';
 import { ZoomControls } from './ZoomControls';
 import { Spotlight } from './teaching/Spotlight';
@@ -112,6 +113,9 @@ export function Workspace() {
   return (
     <main className="tb-workspace" aria-label={t('workspace.label')}>
       <div ref={hostRef} className="tb-board" data-testid="board" />
+      <ErrorBoundary fallback={() => null}>
+        <InstrumentsOverlay />
+      </ErrorBoundary>
       <ErrorBoundary fallback={() => null}>
         <Cover />
         <Spotlight />

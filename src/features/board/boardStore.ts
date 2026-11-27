@@ -1,4 +1,5 @@
 import { createStore } from 'zustand/vanilla';
+import type { Instruments } from '../../core/instruments';
 import { commit, emptyHistory, redo, undo, type DocState } from '../../core/document/history';
 import { newId } from '../../core/document/ids';
 import type { Op } from '../../core/document/ops';
@@ -88,6 +89,9 @@ export interface BoardState extends DocState {
   /** אלמנטים נבחרים בתוך בנייה גיאומטרית (לעריכת מאפיינים) */
   geoSelection: { objectId: string; ids: string[] } | null;
   setGeoSelection(sel: { objectId: string; ids: string[] } | null): void;
+  /** כלי מדידה ושרטוט על הלוח (סרגל, מד-זווית, משולש, מחוגה) – לא נשמרים בשיעור */
+  instruments: Instruments;
+  setInstruments(fn: (i: Instruments) => Instruments): void;
   /** תפריט מהיר עגול (כפתור הצד של העט / קליק ימני) – מיקום במסך, יחסית ללוח */
   quickMenu: { x: number; y: number } | null;
   setQuickMenu(pos: { x: number; y: number } | null): void;
@@ -376,6 +380,10 @@ export function createBoardStore(prefsStorage: SettingsStorage) {
         set({ textEdit: null });
       },
 
+      instruments: {},
+      setInstruments(fn) {
+        set({ instruments: fn(get().instruments) });
+      },
       quickMenu: null,
       setQuickMenu(pos) {
         set({ quickMenu: pos });

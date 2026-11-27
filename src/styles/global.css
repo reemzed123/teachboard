@@ -2469,3 +2469,133 @@ input.tb-layer-name {
 .tb-param-bound input {
   width: 58px;
 }
+
+/* ---------- סרגל, מד-זווית, משולש, מחוגה ---------- */
+.tb-instruments {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.tb-instruments [data-instrument] .tb-ins-body,
+.tb-ins-handle,
+.tb-ins-needle,
+.tb-ins-pencil,
+.tb-ins-close {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.tb-ins-body {
+  cursor: move;
+}
+
+.tb-ins-fill {
+  fill: rgb(253 240 190 / 0.72);
+  stroke: #b08a12;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.tb-ins-ticks line,
+.tb-ins-ticks-line {
+  stroke: #5a4507;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.tb-ins-ticks text,
+.tb-ins-unit,
+.tb-ins-radius {
+  fill: #5a4507;
+  font:
+    600 12px 'Heebo Variable',
+    'Segoe UI',
+    Arial,
+    sans-serif;
+  user-select: none;
+}
+
+.tb-ins-ticks .tb-ins-inner {
+  fill: #b45309;
+  font-size: 10px;
+}
+
+.tb-ins-center {
+  fill: #b45309;
+}
+
+.tb-ins-handle {
+  fill: var(--tb-accent);
+  stroke: #ffffff;
+  stroke-width: 2;
+  cursor: grab;
+  vector-effect: non-scaling-stroke;
+}
+
+.tb-ins-handle-icon {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.tb-ins-close circle {
+  fill: #ffffff;
+  stroke: #94a3b8;
+  vector-effect: non-scaling-stroke;
+}
+
+.tb-ins-close path {
+  stroke: #475569;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.tb-ins-close {
+  cursor: pointer;
+}
+
+.tb-ins-angle {
+  fill: var(--tb-accent);
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 3px;
+}
+
+.tb-ins-guide {
+  fill: none;
+  stroke: #94a3b8;
+  stroke-dasharray: 4 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.tb-ins-arm {
+  stroke: #475569;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.tb-ins-needle {
+  fill: #475569;
+  cursor: move;
+}
+
+.tb-ins-pencil {
+  fill: #f59e0b;
+  stroke: #ffffff;
+  stroke-width: 2;
+  cursor: crosshair;
+  vector-effect: non-scaling-stroke;
+}
+
+.tb-ins-arc {
+  fill: none;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}

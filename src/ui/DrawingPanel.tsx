@@ -17,6 +17,7 @@ import { t } from '../i18n';
 import type { MessageKey } from '../i18n/he';
 import { ACTIONS, actionTooltip } from '../app/actions';
 import { SMOOTHING_LEVELS } from '../core/ink/smoothing';
+import { InstrumentsSection } from './InstrumentsSection';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ActionButton } from './ActionButton';
 import { IconButton } from './IconButton';
@@ -203,6 +204,7 @@ export function DrawingPanel() {
             </label>
             <p className="tb-help">{t('drawing.shapeSnap.help')}</p>
           </div>
+          <InstrumentsSection />
           <div className="tb-field">
             <label className="tb-check">
               <input

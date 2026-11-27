@@ -2,6 +2,7 @@ import { newId } from '../../core/document/ids';
 import { IDENTITY_TRANSFORM, type InkKind, type InkObject } from '../../core/document/types';
 import { simplifyClosePoints } from '../../core/ink/ink';
 import { recognizeShape } from '../../core/ink/recognize';
+import { drawingEdges, nearestEdge, projectOnEdge, type Edge } from '../../core/instruments';
 import {
   beautifyStroke,
   createLiveFilter,
@@ -24,6 +25,8 @@ export const HOLD_TO_SHAPE_MS = 450;
 const HOLD_TOLERANCE_PX = 4;
 /** גודל מינימלי (פיקסלים במסך) לזיהוי צורה – כתב יד קטן לא מזוהה */
 const SHAPE_MIN_SCREEN = 40;
+/** מרחק (פיקסלים במסך) מקצה סרגל/משולש שבו הקו נצמד אליו */
+const EDGE_SNAP_PX = 16;
 /** תזוזה (פיקסלים במסך) אחרי היישור שמבטלת אותו וממשיכה את הקו */
 const UNSNAP_PX = 14;
 
@@ -51,6 +54,8 @@ export class InkTool implements ToolHandler {
   /** החזקת העט במקום: נקודת עוגן (מסך) וטיימר */
   private holdAnchor: { x: number; y: number } | null = null;
   private holdTimer: ReturnType<typeof setTimeout> | undefined;
+  /** קו לאורך קצה של סרגל/משולש: כל הנקודות מוקרנות על הקצה */
+  private edge: Edge | null = null;
   /** הצורה הנקייה שהקו "התיישר" אליה (נקודות x, y) */
   private snapped: number[] | null = null;
 
@@ -95,6 +100,12 @@ export class InkTool implements ToolHandler {
       bx = b.x;
       by = b.y;
     }
+    if (this.edge) {
+      // שרטוט לאורך סרגל: הקו נצמד לקצה
+      const q = projectOnEdge(this.edge, { x: bx, y: by });
+      bx = q.x;
+      by = q.y;
+    }
     const raw = this.rawPressure(p);
     this.livePressure =
       this.points.length === 0
@@ -125,7 +136,13 @@ export class InkTool implements ToolHandler {
     this.points = [];
     this.pressureSeen = false;
     this.livePressure = 0.5;
-    this.filter = createLiveFilter(state.prefs.smoothing);
+    // ליד קצה של סרגל/משולש – הקו יהיה ישר לאורכו
+    this.edge = nearestEdge(
+      drawingEdges(state.instruments),
+      { x: s.point.bx, y: s.point.by },
+      EDGE_SNAP_PX / this.ctx.view().scale,
+    );
+    this.filter = this.edge ? null : createLiveFilter(state.prefs.smoothing);
     this.thinning =
       this.kind === 'pen' && state.prefs.usePressure && s.point.pointerType === 'pen'
         ? PEN_THINNING
@@ -166,7 +183,7 @@ export class InkTool implements ToolHandler {
 
   /** העט זז – מתחילים לספור מחדש; עומד במקום מספיק זמן – מנסים ליישר לצורה */
   private trackHold(p: InputPoint) {
-    if (!this.ctx.state().prefs.shapeSnap) return;
+    if (!this.ctx.state().prefs.shapeSnap || this.edge) return;
     const a = this.holdAnchor;
     if (a && Math.hypot(p.sx - a.x, p.sy - a.y) <= HOLD_TOLERANCE_PX) return;
     this.holdAnchor = { x: p.sx, y: p.sy };
@@ -209,7 +226,13 @@ export class InkTool implements ToolHandler {
     this.snapped = null;
     const raw = snapped
       ? snapped.flatMap((v, i) => (i % 2 === 1 ? [v, 0.5] : [v]))
-      : simplifyClosePoints(beautifyStroke(this.points, state.prefs.smoothing, scale), 0.3 / scale);
+      : this.edge
+        ? simplifyClosePoints(this.points, 0.3 / scale) // לאורך סרגל: בלי החלקה – כבר ישר
+        : simplifyClosePoints(
+            beautifyStroke(this.points, state.prefs.smoothing, scale),
+            0.3 / scale,
+          );
+    this.edge = null;
     // מנרמלים כך שהנקודה הראשונה היא נקודת המוצא של האובייקט.
     const ox = raw[0]!;
     const oy = raw[1]!;
