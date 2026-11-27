@@ -21,7 +21,7 @@ export function FilesPanel() {
   const currentId = useStore(rt.lessons, (s) => s.lessonId);
   const [busy, setBusy] = useState(false);
   // התיקייה שמוצגת (שיעור חדש נוצר בה)
-  const [folderId, setFolderId] = useState<string | null>(null);
+  const [folderId, setFolderId] = useState<string | null>(() => rt.app.getState().filesFolder);
 
   useEffect(() => {
     void rt.lessons.getState().refreshList();
@@ -44,6 +44,14 @@ export function FilesPanel() {
       <section className="tb-field" aria-label={t('files.current')}>
         <h3 className="tb-section-title">{t('files.current')}</h3>
         <div className="tb-button-column">
+          <button
+            type="button"
+            className="tb-btn"
+            data-action="files.home"
+            onClick={() => rt.app.getState().setStartScreen(true)}
+          >
+            {t('action.home')}
+          </button>
           <button
             type="button"
             className="tb-btn"

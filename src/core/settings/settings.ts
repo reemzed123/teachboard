@@ -15,6 +15,8 @@ export interface Settings {
   quickAccess: (string | null)[];
   /** סגירה אוטומטית של החלונית הצדדית כשמתחילים לכתוב על הלוח */
   autoClosePanel: boolean;
+  /** להציג את מסך הפתיחה כשהתוכנה נפתחת */
+  showStartScreen: boolean;
 }
 
 export const DEFAULT_QUICK_ACCESS: readonly string[] = [
@@ -31,6 +33,7 @@ export function createDefaultSettings(): Settings {
     theme: 'system',
     quickAccess: normalizeQuickAccess(DEFAULT_QUICK_ACCESS, DEFAULT_QUICK_ACCESS),
     autoClosePanel: true,
+    showStartScreen: true,
   };
 }
 
@@ -78,7 +81,10 @@ export function parseSettings(raw: unknown, knownActionIds: readonly string[]): 
   const autoClosePanel =
     typeof obj.autoClosePanel === 'boolean' ? obj.autoClosePanel : defaults.autoClosePanel;
 
-  return { version: SETTINGS_VERSION, theme, quickAccess, autoClosePanel };
+  const showStartScreen =
+    typeof obj.showStartScreen === 'boolean' ? obj.showStartScreen : defaults.showStartScreen;
+
+  return { version: SETTINGS_VERSION, theme, quickAccess, autoClosePanel, showStartScreen };
 }
 
 /** מחליף את הפעולה במקום מסוים; אם היא כבר במקום אחר – המקום האחר מתפנה. */

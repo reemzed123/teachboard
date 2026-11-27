@@ -15,6 +15,7 @@ export function SettingsPanel() {
   const setTheme = useApp((s) => s.setTheme);
   const setQuickAccess = useApp((s) => s.setQuickAccess);
   const setAutoClosePanel = useApp((s) => s.setAutoClosePanel);
+  const setShowStartScreen = useApp((s) => s.setShowStartScreen);
   const baseId = useId();
 
   return (
@@ -52,6 +53,14 @@ export function SettingsPanel() {
             onChange={(e) => setAutoClosePanel(e.target.checked)}
           />
           {t('settings.autoClosePanel')}
+        </label>
+        <label className="tb-check">
+          <input
+            type="checkbox"
+            checked={settings.showStartScreen}
+            onChange={(e) => setShowStartScreen(e.target.checked)}
+          />
+          {t('start.showOnStart')}
         </label>
       </fieldset>
 

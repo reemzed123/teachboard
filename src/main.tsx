@@ -53,6 +53,17 @@ const runtime: AppRuntime = {
 installPwaListeners();
 void requestPersistence();
 
+// מסך הפתיחה (לפי ההגדרה). בבדיקות אוטומטיות הוא לא מוצג, אלא אם מבקשים ‎?start=1.
+{
+  const params = new URLSearchParams(location.search);
+  const automated = navigator.webdriver === true;
+  if (
+    params.get('start') === '1' ||
+    (runtime.app.getState().settings.showStartScreen && !automated)
+  )
+    runtime.app.getState().setStartScreen(true);
+}
+
 // פתיחת השיעור האחרון (או יצירת שיעור ראשון).
 void lessons.getState().init();
 lessons.subscribe((s, prev) => {

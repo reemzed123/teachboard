@@ -53,3 +53,11 @@ describe('settings', () => {
     expect(setQuickAccessSlot(slots, 9, 'b')).toEqual(slots);
   });
 });
+
+describe('start screen setting', () => {
+  it('defaults to showing the start screen; a saved choice is kept', () => {
+    expect(parseSettings(null, []).showStartScreen).toBe(true);
+    expect(parseSettings({ showStartScreen: false }, []).showStartScreen).toBe(false);
+    expect(parseSettings({ showStartScreen: 'no' }, []).showStartScreen).toBe(true);
+  });
+});

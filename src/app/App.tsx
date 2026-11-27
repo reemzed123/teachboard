@@ -15,6 +15,7 @@ import { t } from '../i18n';
 import { MathPanel } from '../ui/MathPanel';
 import { GeometryPanel } from '../ui/GeometryPanel';
 import { TeachingPanel } from '../ui/TeachingPanel';
+import { StartScreen } from '../ui/StartScreen';
 import { PdfPanel } from '../ui/PdfPanel';
 import { FormulaDialog } from '../ui/FormulaDialog';
 import { handleShortcut } from './shortcuts';
@@ -32,6 +33,8 @@ export function App() {
   const openPanel = useApp((s) => s.openPanel);
   const categoryBarVisible = useApp((s) => s.categoryBarVisible);
   const focusMode = useApp((s) => s.focusMode);
+  const filesFolder = useApp((s) => s.filesFolder);
+  const startScreen = useApp((s) => s.startScreen);
 
   // מראה: מוחל על המסמך, ומתעדכן גם כשמערכת ההפעלה מחליפה בין בהיר לכהה.
   useEffect(() => {
@@ -63,7 +66,8 @@ export function App() {
         const board = rt.board.getState();
         const s = rt.app.getState();
         const teach = rt.teaching.getState();
-        if (board.selection.length > 0) board.setSelection([]);
+        if (s.startScreen) s.setStartScreen(false);
+        else if (board.selection.length > 0) board.setSelection([]);
         else if (teach.spotlight.on) teach.toggleSpotlight(false);
         else if (teach.cover.on) teach.toggleCover(false);
         else if (s.focusMode) s.setFocusMode(false);
@@ -85,7 +89,12 @@ export function App() {
         {!focusMode && categoryBarVisible && <CategoryBar />}
         {!focusMode && openPanel && (
           // חלונית שנכשלה נסגרת לבד – בלי להפיל את התוכנה
-          <ErrorBoundary key={openPanel} fallback={() => null} onError={() => panelFailed(rt)}>
+          <ErrorBoundary
+            // בחירת תיקייה ממסך הפתיחה פותחת את חלונית השיעורים מחדש בתיקייה הזו
+            key={openPanel === 'files' ? `files-${filesFolder ?? ''}` : openPanel}
+            fallback={() => null}
+            onError={() => panelFailed(rt)}
+          >
             {openPanel === 'settings' && <SettingsPanel />}
             {category?.id === 'drawing' && <DrawingPanel />}
             {category?.id === 'templates' && <TemplatesPanel />}
@@ -109,6 +118,14 @@ export function App() {
       >
         <FormulaDialog />
       </ErrorBoundary>
+      {startScreen && (
+        <ErrorBoundary
+          fallback={() => null}
+          onError={() => rt.app.getState().setStartScreen(false)}
+        >
+          <StartScreen />
+        </ErrorBoundary>
+      )}
       <Toast />
     </div>
   );

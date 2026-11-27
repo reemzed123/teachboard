@@ -28,7 +28,15 @@ export interface AppState {
   openPanel: PanelId | null;
   categoryBarVisible: boolean;
   focusMode: boolean;
+  /** מסך הפתיחה מוצג */
+  startScreen: boolean;
+  /** התיקייה שתוצג בחלונית השיעורים (למשל אחרי בחירה במסך הפתיחה) */
+  filesFolder: string | null;
 
+  setStartScreen(on: boolean): void;
+  setShowStartScreen(on: boolean): void;
+  /** פתיחת חלונית השיעורים בתיקייה מסוימת */
+  openFolder(id: string | null): void;
   setTheme(theme: ThemePreference): void;
   setAutoClosePanel(on: boolean): void;
   setQuickAccess(index: number, actionId: string | null): void;
@@ -57,7 +65,13 @@ export function createAppStore(storage: SettingsStorage) {
       openPanel: null,
       categoryBarVisible: true,
       focusMode: false,
+      startScreen: false,
+      filesFolder: null,
 
+      setStartScreen: (on) => set({ startScreen: on }),
+      setShowStartScreen: (showStartScreen) =>
+        updateSettings({ ...get().settings, showStartScreen }),
+      openFolder: (id) => set({ filesFolder: id, openPanel: 'files', startScreen: false }),
       setTheme: (theme) => updateSettings({ ...get().settings, theme }),
       setAutoClosePanel: (autoClosePanel) => updateSettings({ ...get().settings, autoClosePanel }),
       setQuickAccess: (index, actionId) =>
