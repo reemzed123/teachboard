@@ -1,23 +1,37 @@
 import type { GraphObject, TableObject } from '../../core/document/types';
 import { extrema, verticalAsymptotes } from '../../core/math/analysis';
 import { findRoots, formatNumber, intersections, niceStep } from '../../core/math/numeric';
-import { compileExpression, type RealFn } from '../../core/math/parse';
+import { compileExpression, type ParamValues, type RealFn } from '../../core/math/parse';
 
 // ציור מערכת צירים וגרפים בתוך מלבן האובייקט (קואורדינטות מקומיות).
 
 const fnCache = new Map<string, RealFn | null>();
 
-/** הפונקציה המחושבת לביטוי (או null אם לא ניתן לפענח) */
-export function functionFor(latex: string): RealFn | null {
-  if (!fnCache.has(latex)) {
+/** ערכי הפרמטרים של הגרף (a, b…) */
+export function paramValues(o: Pick<GraphObject, 'params'>): ParamValues {
+  const out: Record<string, number> = {};
+  for (const [k, p] of Object.entries(o.params ?? {})) out[k] = p.value;
+  return out;
+}
+
+/** הפונקציה המחושבת לביטוי (או null אם לא ניתן לפענח, או שחסר ערך לפרמטר) */
+export function functionFor(latex: string, params: ParamValues = {}): RealFn | null {
+  const keys = Object.keys(params);
+  const key = keys.length
+    ? `${latex}§§${keys
+        .sort()
+        .map((k) => `${k}=${params[k]}`)
+        .join(',')}`
+    : latex;
+  if (!fnCache.has(key)) {
     try {
-      fnCache.set(latex, compileExpression(latex));
+      fnCache.set(key, compileExpression(latex, params));
     } catch {
-      fnCache.set(latex, null);
+      fnCache.set(key, null);
     }
     if (fnCache.size > 500) fnCache.delete(fnCache.keys().next().value!);
   }
-  return fnCache.get(latex) ?? null;
+  return fnCache.get(key) ?? null;
 }
 
 const FONT = '"Heebo Variable", "Segoe UI", Arial, sans-serif';
@@ -45,7 +59,7 @@ export function graphAsymptotes(o: GraphObject): GraphAsymptote[] {
   if (!out) {
     out = [];
     for (const f of o.functions) {
-      const fn = f.visible ? functionFor(f.latex) : null;
+      const fn = f.visible ? functionFor(f.latex, paramValues(o)) : null;
       if (!fn) continue;
       for (const x of verticalAsymptotes(fn, o.range.xMin, o.range.xMax))
         out.push({ x, color: f.color });
@@ -72,7 +86,7 @@ function computeGraphPoints(o: GraphObject): GraphPoint[] {
   const { xMin, xMax, yMin, yMax } = o.range;
   const fns = o.functions
     .filter((f) => f.visible)
-    .map((f) => ({ f, fn: functionFor(f.latex) }))
+    .map((f) => ({ f, fn: functionFor(f.latex, paramValues(o)) }))
     .filter((e): e is { f: (typeof o.functions)[number]; fn: RealFn } => !!e.fn);
   const pts: GraphPoint[] = [];
   const inside = (x: number, y: number) =>
@@ -186,7 +200,7 @@ export function drawGraph(ctx: CanvasRenderingContext2D, o: GraphObject): void {
   ctx.lineCap = 'round';
   for (const f of o.functions) {
     if (!f.visible) continue;
-    const fn = functionFor(f.latex);
+    const fn = functionFor(f.latex, paramValues(o));
     if (!fn) continue;
     ctx.strokeStyle = f.color;
     ctx.lineWidth = f.width;

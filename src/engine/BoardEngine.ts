@@ -1,3 +1,4 @@
+import type { BoardObject } from '../core/document/types';
 import { visibleObjects } from '../core/document/layers';
 import Konva from 'konva';
 import { inflate, unionRects, type Rect } from '../core/geometry/rect';
@@ -376,6 +377,15 @@ export class BoardEngine {
     if (this.activeTool) return; // באמצע קו – לא פותחים
     const r = this.host.getBoundingClientRect();
     this.store.getState().setQuickMenu({ x: clientX - r.left, y: clientY - r.top });
+  }
+
+  /** תצוגה זמנית של אובייקטים (למשל גרף בזמן הזזת מחוון) – בלי לשנות את המסמך */
+  previewObjects(objects: readonly BoardObject[]): void {
+    this.objects.previewTransforms(objects);
+  }
+
+  endPreview(ids: readonly string[]): void {
+    this.objects.resetPreview(ids);
   }
 
   /** ביטול כל קלט שבתהליך (קו, גרירה, הזזת לוח, צביטה) */

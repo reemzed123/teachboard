@@ -125,7 +125,16 @@ export interface GraphObject extends ObjectBase {
   showExtrema?: boolean;
   /** חקירה: אסימפטוטות אנכיות (קו מקווקו) */
   showAsymptotes?: boolean;
+  /** פרמטרים עם מחוונים (למשל a, b ב-ax^2+b) */
+  params?: Record<string, GraphParam>;
   functions: GraphFunction[];
+}
+
+export interface GraphParam {
+  value: number;
+  min: number;
+  max: number;
+  step: number;
 }
 
 /** טבלה (למשל טבלת ערכים). השורה הראשונה היא כותרת. */

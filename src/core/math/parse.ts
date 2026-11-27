@@ -5,6 +5,8 @@
 export type Node =
   | { k: 'num'; v: number }
   | { k: 'x' }
+  /** פרמטר (אות כמו a, b) – ערכו נקבע מבחוץ (מחוון בגרף) */
+  | { k: 'param'; name: string }
   | { k: 'neg'; a: Node }
   | { k: 'add' | 'sub' | 'mul' | 'div' | 'pow'; a: Node; b: Node }
   | { k: 'fn'; name: FnName; a: Node }
@@ -43,6 +45,7 @@ export class MathParseError extends Error {
 type Tok =
   | { t: 'num'; v: number; p: number; raw: string }
   | { t: 'x'; p: number }
+  | { t: 'param'; name: string; p: number }
   | { t: 'const'; v: number; p: number }
   | { t: 'fn'; name: FnName | 'log'; p: number }
   | { t: 'cmd'; name: 'frac' | 'sqrt'; p: number }
@@ -161,6 +164,9 @@ function tokenize(src: string): Tok[] {
         } else if (word[0] === 'e') {
           out.push({ t: 'const', v: Math.E, p });
           word = word.slice(1);
+        } else if (PARAM_LETTERS.includes(word[0]!)) {
+          out.push({ t: 'param', name: word[0]!, p });
+          word = word.slice(1);
         } else {
           throw new MathParseError(`unknown ${word}`, p);
         }
@@ -241,7 +247,14 @@ class Parser {
   /** האם האסימון הבא יכול להתחיל גורם (לכפל מרומז: 2x, 3\sin x, (x+1)(x-1)) */
   private startsFactor(): boolean {
     const t = this.peek();
-    if (t.t === 'num' || t.t === 'x' || t.t === 'const' || t.t === 'fn' || t.t === 'cmd')
+    if (
+      t.t === 'num' ||
+      t.t === 'x' ||
+      t.t === 'param' ||
+      t.t === 'const' ||
+      t.t === 'fn' ||
+      t.t === 'cmd'
+    )
       return true;
     if (t.t === 'open') return t.v !== '|' || this.absDepth === 0;
     return false;
@@ -324,6 +337,7 @@ class Parser {
       return { k: 'num', v: t.v };
     }
     if (t.t === 'x') return { k: 'x' };
+    if (t.t === 'param') return { k: 'param', name: t.name };
     throw new MathParseError('expected {', t.p);
   }
 
@@ -334,6 +348,8 @@ class Parser {
         return { k: 'num', v: t.v };
       case 'x':
         return { k: 'x' };
+      case 'param':
+        return { k: 'param', name: t.name };
       case 'const':
         return { k: 'num', v: t.v };
       case 'open':
@@ -447,8 +463,37 @@ function pow(a: number, b: number): number {
   return r;
 }
 
-export function compile(n: Node): RealFn {
+/** אותיות שיכולות להיות פרמטרים (בלי x, e, y – ובלי i, l, o שקל לבלבל) */
+export const PARAM_LETTERS = 'abcdfghjkmnpqrstuvwz';
+
+export type ParamValues = Readonly<Record<string, number>>;
+
+/** הפרמטרים שמופיעים בביטוי (למשל ['a', 'b']), לפי סדר הא"ב */
+export function findParams(src: string): string[] {
+  const names = new Set<string>();
+  const visit = (n: Node) => {
+    if (n.k === 'param') names.add(n.name);
+    for (const key of ['a', 'b', 'n', 'base'] as const) {
+      const c = (n as Record<string, unknown>)[key];
+      if (c && typeof c === 'object') visit(c as Node);
+    }
+  };
+  try {
+    visit(parseExpression(src));
+  } catch {
+    return [];
+  }
+  return [...names].sort();
+}
+
+export function compile(n: Node, params: ParamValues = {}): RealFn {
+  const c = (m: Node) => compile(m, params);
   switch (n.k) {
+    case 'param': {
+      if (!(n.name in params)) throw new MathParseError(`unknown ${n.name}`, 0);
+      const v = params[n.name]!;
+      return () => v;
+    }
     case 'num': {
       const v = n.v;
       return () => v;
@@ -456,53 +501,63 @@ export function compile(n: Node): RealFn {
     case 'x':
       return (x) => x;
     case 'neg': {
-      const a = compile(n.a);
+      const a = c(n.a);
       return (x) => -a(x);
     }
     case 'add': {
-      const a = compile(n.a);
-      const b = compile(n.b);
+      const a = c(n.a);
+      const b = c(n.b);
       return (x) => a(x) + b(x);
     }
     case 'sub': {
-      const a = compile(n.a);
-      const b = compile(n.b);
+      const a = c(n.a);
+      const b = c(n.b);
       return (x) => a(x) - b(x);
     }
     case 'mul': {
-      const a = compile(n.a);
-      const b = compile(n.b);
+      const a = c(n.a);
+      const b = c(n.b);
       return (x) => a(x) * b(x);
     }
     case 'div': {
-      const a = compile(n.a);
-      const b = compile(n.b);
+      const a = c(n.a);
+      const b = c(n.b);
       return (x) => a(x) / b(x);
     }
     case 'pow': {
-      const a = compile(n.a);
-      const b = compile(n.b);
+      const a = c(n.a);
+      const b = c(n.b);
       return (x) => pow(a(x), b(x));
     }
     case 'fn': {
-      const a = compile(n.a);
+      const a = c(n.a);
       const f = FN_IMPL[n.name];
       return (x) => f(a(x));
     }
     case 'log': {
-      const a = compile(n.a);
-      const b = compile(n.base);
+      const a = c(n.a);
+      const b = c(n.base);
       return (x) => Math.log(a(x)) / Math.log(b(x));
     }
     case 'root': {
-      const a = compile(n.a);
-      const r = compile(n.n);
+      const a = c(n.a);
+      const r = c(n.n);
       return (x) => pow(a(x), 1 / r(x));
     }
   }
 }
 
+/** האם הביטוי תקין תחבירית (פרמטרים כמו a, b מותרים) */
+export function isValidExpression(src: string): boolean {
+  try {
+    parseExpression(src);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** מפענח ומחזיר פונקציה, או שגיאה מוסברת */
-export function compileExpression(src: string): RealFn {
-  return compile(parseExpression(src));
+export function compileExpression(src: string, params?: ParamValues): RealFn {
+  return compile(parseExpression(src), params);
 }

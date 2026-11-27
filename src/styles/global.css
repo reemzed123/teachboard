@@ -2425,3 +2425,47 @@ input.tb-layer-name {
   grid-template-columns: repeat(3, 1fr);
   gap: 4px 8px;
 }
+
+/* מחווני פרמטרים בגרף */
+.tb-param {
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius);
+  background: var(--tb-surface-2);
+}
+
+.tb-param-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tb-param-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--panel-color, var(--tb-accent));
+}
+
+.tb-param-range {
+  width: 100%;
+  accent-color: var(--panel-color, var(--tb-accent));
+}
+
+.tb-param-bounds {
+  display: flex;
+  gap: 6px;
+}
+
+.tb-param-bound {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--tb-text-muted);
+}
+
+.tb-param-bound input {
+  width: 58px;
+}

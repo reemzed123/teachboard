@@ -24,6 +24,7 @@ import {
   type PageBackground,
   type PageLayer,
   type ImageObject,
+  type GraphParam,
   type NumberLineObject,
   type FractionBarsObject,
 } from '../document/types';
@@ -271,6 +272,7 @@ function cleanGraph(v: Obj, id: string): GraphObject | null {
       showIntersections: v.showIntersections === true,
       ...(v.showExtrema === true ? { showExtrema: true } : {}),
       ...(v.showAsymptotes === true ? { showAsymptotes: true } : {}),
+      ...cleanGraphParams(v.params),
       functions,
     },
     v,
@@ -342,6 +344,21 @@ function cleanImage(v: Obj, id: string): ImageObject | null {
     },
     v,
   );
+}
+
+function cleanGraphParams(v: unknown): { params?: Record<string, GraphParam> } {
+  if (!isObj(v)) return {};
+  const params: Record<string, GraphParam> = {};
+  for (const [k, p] of Object.entries(v).slice(0, 8)) {
+    if (!/^[a-z]$/.test(k) || !isObj(p)) continue;
+    const min = num(p.min, -1e6, 1e6);
+    const max = num(p.max, -1e6, 1e6);
+    const step = num(p.step, 1e-6, 1e6);
+    const value = num(p.value, -1e6, 1e6);
+    if (min === null || max === null || step === null || value === null || max <= min) continue;
+    params[k] = { min, max, step, value: Math.min(max, Math.max(min, value)) };
+  }
+  return Object.keys(params).length ? { params } : {};
 }
 
 function cleanTable(v: Obj, id: string): TableObject | null {

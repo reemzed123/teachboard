@@ -160,3 +160,40 @@ test('function names f(x), g(x); enlarging the graph frame widens the range (num
   const zoomed = (await objects(page))[0]!;
   expect(zoomed.range.xMax - zoomed.range.xMin).toBeLessThan(after.range.xMax - after.range.xMin);
 });
+
+test('graph parameters: writing ax^2 adds a slider; moving it changes the graph (one undo step)', async ({
+  page,
+}) => {
+  await newGraphWith(page, 'ax^2');
+  const sliders = page.getByTestId('graph-sliders');
+  await expect(sliders).toBeVisible();
+  // המקלדת שעל המסך נסגרת אחרי Enter (עם הנפשה קצרה)
+  await expect(page.locator('.ML__keyboard.is-visible')).toHaveCount(0);
+  await page.waitForTimeout(400);
+  const value = () =>
+    page.evaluate(() => {
+      const s = (window as any).__tb.runtime.board.getState();
+      const g = s.doc.pages[0].objects.find((o: any) => o.type === 'graph');
+      return g.params?.a?.value;
+    });
+  expect(await value()).toBe(1);
+  const before = await page.evaluate(
+    () => (window as any).__tb.runtime.board.getState().history.past.length,
+  );
+  const slider = sliders.locator('[data-param-slider="a"]');
+  const box = (await slider.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.85, box.y + box.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(value).toBeGreaterThan(5);
+  const after = await page.evaluate(
+    () => (window as any).__tb.runtime.board.getState().history.past.length,
+  );
+  expect(after - before).toBe(1);
+  // הנפשה ועצירה
+  await sliders.locator('[data-param-play="a"]').click();
+  await page.waitForTimeout(400);
+  await sliders.locator('[data-param-play="a"]').click();
+  await expect(sliders.locator('[data-param-slider="a"]')).toBeEnabled();
+});

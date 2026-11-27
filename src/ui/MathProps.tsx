@@ -110,6 +110,7 @@ function NumberLineEditor({
       <input
         className="tb-input tb-input-small"
         type="number"
+        dir="ltr"
         data-numberline={k}
         defaultValue={o[k]}
         step="any"

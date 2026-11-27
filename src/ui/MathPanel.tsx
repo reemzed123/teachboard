@@ -23,11 +23,14 @@ import { defaultRange, functionName, panGraph, zoomGraph } from '../core/math/gr
 import { useBoard, useRuntime } from '../app/StoreContext';
 import { currentPage } from '../features/board/boardStore';
 import { loadMathLive } from '../features/math/mathlive';
-import { functionFor } from '../engine/render/drawGraph';
+import { functionFor, paramValues } from '../engine/render/drawGraph';
 import { visibleBoardRect } from '../engine/viewport';
 import { t } from '../i18n';
 import { IconButton } from './IconButton';
 import { SidePanel } from './SidePanel';
+import { GraphSliders } from './GraphSliders';
+import { syncParams } from '../core/math/params';
+import { isValidExpression } from '../core/math/parse';
 import { MathProps } from './MathProps';
 
 const GRAPH_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#ea580c', '#7c3aed', '#0891b2'];
@@ -120,7 +123,8 @@ function GraphEditor({ graph }: { graph: GraphObject }) {
       // בלי שינוי אמיתי – לא נרשם צעד לביטול
       if (!f || Object.entries(patch).every(([k, v]) => f[k as keyof GraphFunction] === v))
         return null;
-      return { functions: g.functions.map((x) => (x.id === fid ? { ...x, ...patch } : x)) };
+      const functions = g.functions.map((x) => (x.id === fid ? { ...x, ...patch } : x));
+      return { functions, params: syncParams(functions, g.params) };
     });
 
   const addFunction = () =>
@@ -150,7 +154,10 @@ function GraphEditor({ graph }: { graph: GraphObject }) {
               fn={f}
               onChange={(patch) => setFunction(f.id, patch)}
               onRemove={() =>
-                update((g) => ({ functions: g.functions.filter((x) => x.id !== f.id) }))
+                update((g) => {
+                  const functions = g.functions.filter((x) => x.id !== f.id);
+                  return { functions, params: syncParams(functions, g.params) };
+                })
               }
             />
           ))}
@@ -165,6 +172,8 @@ function GraphEditor({ graph }: { graph: GraphObject }) {
         </button>
         <p className="tb-help">{t('math.functionHelp')}</p>
       </fieldset>
+
+      {graph.params && Object.keys(graph.params).length > 0 && <GraphSliders graph={graph} />}
 
       <fieldset className="tb-field">
         <legend>{t('math.range')}</legend>
@@ -275,7 +284,7 @@ function FunctionRow({
 }) {
   const fieldRef = useRef<(HTMLElement & { value: string }) | null>(null);
   const [ready, setReady] = useState(false);
-  const valid = fn.latex.trim() === '' || functionFor(fn.latex) !== null;
+  const valid = fn.latex.trim() === '' || isValidExpression(fn.latex);
 
   useEffect(() => {
     let alive = true;
@@ -290,7 +299,11 @@ function FunctionRow({
     if (!ready || !el) return;
     if (el.value !== fn.latex) el.value = fn.latex;
     // "change" = Enter או יציאה מהשדה: רק אז מעדכנים את הגרף (ונרשם לביטול)
-    const onChangeEv = () => onChange({ latex: el.value });
+    const onChangeEv = () => {
+      onChange({ latex: el.value });
+      // אחרי Enter – יוצאים מהשדה, כדי שהמקלדת שעל המסך תיסגר ולא תסתיר את החלונית
+      if (document.activeElement === el) el.blur();
+    };
     el.addEventListener('change', onChangeEv);
     return () => el.removeEventListener('change', onChangeEv);
   }, [ready, fn.latex, onChange]);
@@ -383,13 +396,15 @@ function NumberInput({
 /** טבלת ערכים לפונקציה שנבחרה, עם אפשרות להוסיף אותה ללוח */
 function ValueTable({ graph }: { graph: GraphObject }) {
   const rt = useRuntime();
-  const usable = graph.functions.filter((f) => f.latex.trim() && functionFor(f.latex));
+  const usable = graph.functions.filter(
+    (f) => f.latex.trim() && functionFor(f.latex, paramValues(graph)),
+  );
   const [fnId, setFnId] = useState<string>('');
   const [from, setFrom] = useState(-2);
   const [step, setStep] = useState(1);
   const [count, setCount] = useState(5);
   const fn = usable.find((f) => f.id === fnId) ?? usable[0];
-  const compiled = fn ? functionFor(fn.latex) : null;
+  const compiled = fn ? functionFor(fn.latex, paramValues(graph)) : null;
   const rows = compiled ? valueTable(compiled, from, step, count) : [];
 
   if (usable.length === 0) return null;
