@@ -1,6 +1,6 @@
 [package]
 name = "teachboard"
-version = "0.9.1"
+version = "0.9.2"
 description = "TeachBoard – סביבת הוראה דיגיטלית למורים"
 edition = "2021"
 publish = false
